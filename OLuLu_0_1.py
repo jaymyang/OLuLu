@@ -317,7 +317,7 @@ def main():
                     one_weight_temp=discard_outlier(one_min_weight) #呼叫。除掉outlier，傳回資料放在one_weight_temp
                     weight_FLUID.append(np.mean(one_weight_temp))   #將已去除outlier的數字計算平均，並加入重量紀錄主串列weight_Fluid
                     time_INDEX.append(time.strftime("%Y-%m-%d %H:%M")) #將目前時間加入時間記錄主串列time_INDEX
-                    plot_scatter("weight change :"+str(five_weight_change))  
+                    
                     one_min_weight=[]
                 else:
                     weight_FLUID.append(weight_FLUID[-1]) #等於上一分的數字   
@@ -327,7 +327,7 @@ def main():
 #每5分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
                 if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
                     five_weight_change=calculate_weight_changes(10) #呼叫。取倒數10個計算重量變化
-                    #making_sound(350,25,0.1,2)
+                    plot_scatter("weight change :"+str(five_weight_change))  
                     PRINT("最近十分鐘尿量:"+str(five_weight_change))
         #利用重量變化計算趨勢與估計未來尿量
                     five_regression=calculate_regression(weight_FLUID,10)   #呼叫。以每分鐘重量差，評估趨勢（至少10個的時候才跑回歸計算趨勢）
