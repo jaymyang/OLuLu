@@ -1,10 +1,11 @@
-# On Line urine Lever urility ver 0.1
+# On Line urine Lever urility ver 0.11
+# 由於如果使用maplotlib，無法使用Unihiker的A/B鍵功能，改成自己畫圖。
 import time
 import csv
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import serial
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import serial.tools.list_ports
 import warnings
 import serial.tools.list_ports
@@ -98,7 +99,8 @@ def INPUT():
     
 def PRINT(text_string):
     info_text.config(x=1)
-    info_text.config(y=300)
+    info_text.config(y=305)
+    info_text.config(font_size=10)
     info_text.config(text='')
     info_text.config(text=text_string)
         
@@ -219,22 +221,6 @@ def plot_scatter():
         gui.fill_circle(x=240-4*x_cor[i], y=round(300-weight_plot[i]/3), r=2, color="blue")
 
     time.sleep(0.1)
-    
-    #if time.localtime()[4] in period_minute:
-    #    if len(weight_FLUID) > 0:
-    #        plt.ion()
-    #        plt.clf()
-    #        if weight_PREVIOUS==[]:
-    #            weight_plot=weight_FLUID
-    #        else:
-    #            weight_plot=weight_PREVIOUS+weight_FLUID #合併已存檔的資料（順序在前）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料
-    #        x = np.arange(-len(weight_plot),0,1,int) #用來繪圖搭配的X座標，個數為weight_plot裡面的元素數目，加上負號
-    #        #plt.title(Title, fontsize=10)
-    #        plt.rcParams.update({'font.size': 8})
-    #        plt.xlim([-60, 0]) #最左邊是-60
-    #        #plt.ylim([-10, 1000])
-    #        plt.scatter(x, weight_plot, c='g', marker='>')
-    #        plt.pause(0.1)
 
 
 # Function to save data
@@ -268,14 +254,15 @@ def saving_data(saving_time, saving_weight, cutting_index):
         return saving_time, saving_weight,file_weight
 
 def good_bye(): #按A或B鍵結束
-    #plt.close('all')
+    gui.clear()
     with open(file_name, 'a', newline='') as csvfile:
         wt = csv.writer(csvfile)
         for save_time, save_weight in zip(time_INDEX,weight_FLUID):
             wt.writerow([save_time, save_weight])
     exit(0)
-    PRINT('Data saved. Good Bye~')
-    PRINT('以下為PYTHON訊息')
+    print('Data saved. Good Bye~')
+    print('以下為PYTHON訊息')
+    
     #raise KeyboardInterrupt()
 
 
@@ -395,7 +382,7 @@ if __name__ == '__main__':
     file_name=RESULT+'.csv'
     PRINT('file:'+file_name)
     warnings.filterwarnings('ignore', module="numpy")
-    warnings.filterwarnings("ignore", module="matplotlib")
+    #warnings.filterwarnings("ignore", module="matplotlib")
     warnings.filterwarnings('ignore', message='invalid value encountered in scalar divide')
     warnings.filterwarnings('ignore', message='invalid value encountered in divide')
     gui.on_key_click('a',good_bye)#按A或B鍵結束 
