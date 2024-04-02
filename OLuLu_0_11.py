@@ -385,5 +385,6 @@ if __name__ == '__main__':
     #warnings.filterwarnings("ignore", module="matplotlib")
     warnings.filterwarnings('ignore', message='invalid value encountered in scalar divide')
     warnings.filterwarnings('ignore', message='invalid value encountered in divide')
-    gui.on_key_click('a',good_bye)#按A或B鍵結束 
+    gui.on_key_click('a',good_bye)#按A或B鍵結束
+    gui.on_key_click('b',good_bye)#按A或B鍵結束 
     main()
