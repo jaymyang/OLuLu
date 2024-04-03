@@ -10,9 +10,10 @@ import serial.tools.list_ports
 import warnings
 import serial.tools.list_ports
 from unihiker import GUI   # Import the package
+import sys
 gui = GUI() 
 txt=gui.draw_text(text="",x=120,y=10,font_size=12,origin="center",color="#0000FF")
-info_text=gui.draw_text()
+message_text=gui.draw_text()
 bt = "null"
 # Initialize variables
 arduinoSerial = None
@@ -29,6 +30,7 @@ weight_old=None
 mean=None
 std_dev=None
 time_stamp=time.time()
+display_text=''
 
 COM_PORT = 'dev/ttyACM0'
 BAUD_RATES = 9600
@@ -58,10 +60,6 @@ def INPUT():
         txt.config(text=string_result)
         pass
 
-#gui.add_button(x=40, y=70, w=60, h=60, text="1",font_size=36, origin='center', onclick=lambda: btclick('1'))
-#gui.add_button(x=120, y=70, w=60, h=60, text="2", origin='center', onclick=lambda: btclick('2'))
-#gui.add_button(x=200, y=70, w=60, h=60, text="3", origin='center', onclick=lambda: btclick('3'))
-#Button比較靈敏，但是字體不能放大。使用數字一定要壓到數字的線條才有反應。
     B1=gui.draw_digit(x=40, y=70, text='1', origin="center", color="black", font_size=36,onclick=lambda: btclick('1'))
     B2=gui.draw_digit(x=120, y=70, text="2", origin='center',color="black", font_size=36, onclick=lambda: btclick('2'))
     B3=gui.draw_digit(x=200, y=70, text="3", origin='center',color="black", font_size=36, onclick=lambda: btclick('3'))
@@ -96,17 +94,26 @@ def INPUT():
         else:
            # buttons()
             time.sleep(0.1)#增加等待，防止程序退出和卡住
+
+def MESSAGE(text_string):
+    message_text.config(x=1)
+    message_text.config(y=302)
+    message_text.config(font_size=10)
+    message_text.config(text='')
+    message_text.config(text=text_string)
+
     
 def PRINT(text_string):
+    global display_text
+    #display_text=''
+    info_text=gui.draw_text()
     info_text.config(x=1)
-    info_text.config(y=305)
+    info_text.config(y=302)
     info_text.config(font_size=10)
     info_text.config(text='')
     info_text.config(text=text_string)
-        
-def clicked():
-    global bt
-    bt="save"
+    display_text=text_string
+
 
 # 以下是主要函式Functions listed below
 # Function to get weight from Arduino
@@ -205,21 +212,21 @@ def calculate_regression(analysis_wt, n_of_elements):
 
 # Function to plot scatter plot
 def plot_scatter():
-    global weight_PREVIOUS,weight_FLUID,period_minute #計畫上限畫到多少？暫定1000公克好了
+    global weight_PREVIOUS,weight_FLUID,period_minute,display_text #計畫上限畫到多少？暫定1000公克好了
     if weight_PREVIOUS==[]:
         weight_plot=weight_FLUID
     else:
         weight_plot=weight_PREVIOUS+weight_FLUID #合併已存檔的資料（順序在前）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料
     gui.clear()
-    for yn in range(20,300,20): #畫出格線
-        gui.draw_line(x0=0, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))
-    for xn in range(20,240,20):
-        gui.draw_line(x0=xn, y0=0, x1=xn, y1=300, width=1, color=(122, 222, 44))
+    for yn in range(0,301,20): #畫出格線
+        gui.draw_line(x0=1, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#橫線
+    for xn in range(0,240,20):
+        gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #縱線
     x_cor = np.arange(0,len(weight_plot),1) 
     x_cor=x_cor[::-1]
     for i in range(0,len(weight_plot)-1,1):
         gui.fill_circle(x=240-4*x_cor[i], y=round(300-weight_plot[i]/3), r=2, color="blue")
-
+    PRINT(display_text)
     time.sleep(0.1)
 
 
@@ -228,7 +235,7 @@ def saving_data(saving_time, saving_weight, cutting_index):
     if saving_weight:
         hour_weight_change = calculate_weight_changes(0)#從0開始算，該函式回傳數值weight_sum在此會放進hour_weight_change。
         time_marker = time.strftime("%Y-%m-%d, %H:%M")
-        PRINT(time_marker+ "過去30分鐘重量變化："+ str(hour_weight_change))#每30分的加總統計。
+        PRINT("過去30分鐘重量變化："+ str(hour_weight_change))#每30分的加總統計。
 
         saving_time_upper = [t for t in saving_time if int(t[-2:]) < 30]#表示這是00-29分的資料，放進上半。t指time，w指weight
         saving_weight_upper = [w for t, w in zip(saving_time, saving_weight) if int(t[-2:]) < 30] #把兩個串列裡相同位置的元素配在一起
@@ -253,15 +260,15 @@ def saving_data(saving_time, saving_weight, cutting_index):
             PRINT("過去30分鐘數據存檔完成")
         return saving_time, saving_weight,file_weight
 
-def good_bye(): #按A或B鍵結束
-    gui.clear()
+def good_bye(): #按A或B鍵結束    
     with open(file_name, 'a', newline='') as csvfile:
         wt = csv.writer(csvfile)
         for save_time, save_weight in zip(time_INDEX,weight_FLUID):
             wt.writerow([save_time, save_weight])
-    exit(0)
+    gui.clear()    
     print('Data saved. Good Bye~')
-    print('以下為PYTHON訊息')
+    #print('以下為PYTHON訊息')
+    sys.exit(0)
     
     #raise KeyboardInterrupt()
 
@@ -273,7 +280,7 @@ def main():
     time_INDEX.append(time.strftime("%Y-%m-%d %H:%M"))
     initial_weight_temp=initial_value()
     weight_FLUID.append(initial_weight_temp)
-    print('初始值:'+str(weight_FLUID[0])+time_INDEX[0]) 
+    PRINT('初始值:'+str(weight_FLUID[0])+time_INDEX[0]) 
 
     if time.localtime()[4] == 29 or 59:
         time.sleep(60)
@@ -289,8 +296,7 @@ def main():
 
     #以下開始
     while True:
-        
-              
+                      
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複            
 
             if time.localtime()[4] != current_minute: #current_time代表以下程式區塊所執行的時間。time.localtime[4]不等於current_time時，表示是新的分鐘
@@ -350,7 +356,6 @@ def main():
                 pass
             else:
                 pass
-
             
             time.sleep(0.1)
 
@@ -372,7 +377,7 @@ if __name__ == '__main__':
         #PRINT("Arduino device found on " + COM_PORT)
         else:
             continue    
-    PRINT("Port:"+COM_PORT)
+    MESSAGE("Port:"+COM_PORT)
 #開始主程式。
     arduinoSerial = serial.Serial(COM_PORT, BAUD_RATES)
     start_time=time.localtime()
@@ -380,11 +385,11 @@ if __name__ == '__main__':
         time.sleep(60)
     RESULT=INPUT()              
     file_name=RESULT+'.csv'
-    PRINT('file:'+file_name)
+    MESSAGE('file:'+file_name)
     warnings.filterwarnings('ignore', module="numpy")
     #warnings.filterwarnings("ignore", module="matplotlib")
     warnings.filterwarnings('ignore', message='invalid value encountered in scalar divide')
     warnings.filterwarnings('ignore', message='invalid value encountered in divide')
-    gui.on_key_click('a',good_bye)#按A或B鍵結束
-    gui.on_key_click('b',good_bye)#按A或B鍵結束 
+    gui.on_a_click(good_bye)#按A鍵結束
+    gui.on_b_click(good_bye)#按B鍵結束 
     main()
