@@ -14,7 +14,7 @@ import sys
 gui = GUI() 
 txt=gui.draw_text(text="",x=120,y=10,font_size=12,origin="center",color="#0000FF")
 message_text=gui.draw_text()
-bt = "null"
+
 # Initialize variables
 arduinoSerial = None
 period_second = [0,1,2,3,4,5,6,7,8,9,10]  #設定抓取序列埠傳入資料的時間（秒）
@@ -101,18 +101,54 @@ def MESSAGE(text_string):
     message_text.config(font_size=10)
     message_text.config(text='')
     message_text.config(text=text_string)
-
     
-def PRINT(text_string):
+################################################################################################################################### 
+def MAIN_DISPLAY(action,message1,message2): 
+    text_string=''
+    def PRINT(text_string):
+        info_text=gui.draw_text()
+        info_text.config(x=1)
+        info_text.config(y=302)
+        info_text.config(font_size=10)
+        info_text.config(text='')
+        info_text.config(text=text_string)
+        return text_string   
+    # Function to plot scatter plot
+    def PLOT_SCATTER(message1,message2):
+        if message2==[]: #message2是接受傳來的weight_PREVIOUS。這裡分開，免得最重要的被弄壞
+            weight_plot=message1
+        else:
+            weight_plot=message2+message1 #合併已存檔的資料（順序在前）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料
+        CLEAN()
+        for yn in range(0,301,20): #畫出格線
+            gui.draw_line(x0=1, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#橫線
+        for xn in range(0,240,20):
+            gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #縱線
+        x_cor = np.arange(0,len(weight_plot),1) 
+        x_cor=x_cor[::-1]
+        for i in range(0,len(weight_plot)-1,1):
+            gui.fill_circle(x=240-4*x_cor[i], y=round(300-weight_plot[i]/3), r=2, color="blue")
+        PRINT(display_text)
+        time.sleep(0.1)
+    def CLEAN():
+        gui.clear()
+        
     global display_text
+    if action=='print':
+        PRINT(message1)
+        display_text=text_string #先留著
+    elif action=='plot':
+        PLOT_SCATTER(message1,message2)
+    elif action=='clean':
+        CLEAN()
+    else:
+        pass
+    
+        
+    #global display_text, weight_PREVIOUS,weight_FLUID,period_minute,display_text #計畫上限畫到多少？暫定1000公克好了
     #display_text=''
-    info_text=gui.draw_text()
-    info_text.config(x=1)
-    info_text.config(y=302)
-    info_text.config(font_size=10)
-    info_text.config(text='')
-    info_text.config(text=text_string)
-    display_text=text_string
+    
+###################################################################################################################################   
 
 
 # 以下是主要函式Functions listed below
@@ -147,7 +183,7 @@ def get_weight():
         arduinoSerial.close()
         arduinoSerial.open() #重設serial
         weight_temp=0 #回傳為0
-        PRINT('weight_temp<-100')
+        MAIN_DISPLAY('print','weight_temp<-100','')
     elif data_temp ==-999: #如果跑完還是-999，表示本秒沒抓到；但是假如什麼也不做，回傳的就會是''
         weight_temp=-999
         pass
@@ -155,7 +191,7 @@ def get_weight():
         weight_temp=data_temp
           
     arduinoSerial.reset_input_buffer()
-    print('weight_temp',weight_temp)
+    #print('weight_temp',weight_temp)
     return weight_temp
 
 # Function to discard outliers
@@ -187,11 +223,11 @@ def calculate_weight_changes(start_element):#呼叫時，要指定從串列的�
                 weight_sum=weight_sum+weight_max-weight_min #之所以不能直接用< A_min，是考慮到有可能倒完以後的重量還是比空袋重，這樣就偵測不到了
                 weight_max=weight_recent[i] #重設
                 weight_min=weight_recent[i] #重設
-                PRINT("可能有突減大量:"+str(weight_sum)) #提醒使用者可能有誤差                
+                MAIN_DISPLAY('print',"可能有突減大量:"+str(weight_sum),'') #提醒使用者可能有誤差                
             weight_sum=weight_max-weight_min
             if small_volume<10:#這裡是預設在一個尿量波動很小的範圍的時候，直接用最大值減最小值來估計就好。不管每5分鐘或每小時，都用10gm
                 weight_Sum=small_volume
-    PRINT("小計:"+str(weight_sum))
+    MAIN_DISPLAY('print',"小計:"+str(weight_sum),'')
     return weight_sum
     
 
@@ -210,24 +246,6 @@ def calculate_regression(analysis_wt, n_of_elements):
     model = LinearRegression().fit(x, y)
     return model.intercept_, model.coef_
 
-# Function to plot scatter plot
-def plot_scatter():
-    global weight_PREVIOUS,weight_FLUID,period_minute,display_text #計畫上限畫到多少？暫定1000公克好了
-    if weight_PREVIOUS==[]:
-        weight_plot=weight_FLUID
-    else:
-        weight_plot=weight_PREVIOUS+weight_FLUID #合併已存檔的資料（順序在前）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料
-    gui.clear()
-    for yn in range(0,301,20): #畫出格線
-        gui.draw_line(x0=1, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#橫線
-    for xn in range(0,240,20):
-        gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #縱線
-    x_cor = np.arange(0,len(weight_plot),1) 
-    x_cor=x_cor[::-1]
-    for i in range(0,len(weight_plot)-1,1):
-        gui.fill_circle(x=240-4*x_cor[i], y=round(300-weight_plot[i]/3), r=2, color="blue")
-    PRINT(display_text)
-    time.sleep(0.1)
 
 
 # Function to save data
@@ -235,7 +253,7 @@ def saving_data(saving_time, saving_weight, cutting_index):
     if saving_weight:
         hour_weight_change = calculate_weight_changes(0)#從0開始算，該函式回傳數值weight_sum在此會放進hour_weight_change。
         time_marker = time.strftime("%Y-%m-%d, %H:%M")
-        PRINT("過去30分鐘重量變化："+ str(hour_weight_change))#每30分的加總統計。
+        MAIN_DISPLAY('print',"過去30分鐘重量變化："+ str(hour_weight_change),'')#每30分的加總統計。
 
         saving_time_upper = [t for t in saving_time if int(t[-2:]) < 30]#表示這是00-29分的資料，放進上半。t指time，w指weight
         saving_weight_upper = [w for t, w in zip(saving_time, saving_weight) if int(t[-2:]) < 30] #把兩個串列裡相同位置的元素配在一起
@@ -257,7 +275,7 @@ def saving_data(saving_time, saving_weight, cutting_index):
             #print("file_weight:"+file_weight)
             for save_time, save_weight in zip(file_time, file_weight):
                 wt.writerow([save_time, save_weight])
-            PRINT("過去30分鐘數據存檔完成")
+            MAIN_DISPLAY('print',"過去30分鐘數據存檔完成",'')
         return saving_time, saving_weight,file_weight
 
 def good_bye(): #按A或B鍵結束    
@@ -265,7 +283,7 @@ def good_bye(): #按A或B鍵結束
         wt = csv.writer(csvfile)
         for save_time, save_weight in zip(time_INDEX,weight_FLUID):
             wt.writerow([save_time, save_weight])
-    gui.clear()    
+    MAIN_DISPLAY('clean','','')
     print('Data saved. Good Bye~')
     #print('以下為PYTHON訊息')
     sys.exit(0)
@@ -280,7 +298,7 @@ def main():
     time_INDEX.append(time.strftime("%Y-%m-%d %H:%M"))
     initial_weight_temp=initial_value()
     weight_FLUID.append(initial_weight_temp)
-    PRINT('初始值:'+str(weight_FLUID[0])+time_INDEX[0]) 
+    MAIN_DISPLAY('print','初始值:'+str(weight_FLUID[0])+time_INDEX[0],'') 
 
     if time.localtime()[4] == 29 or 59:
         time.sleep(60)
@@ -322,24 +340,24 @@ def main():
                     one_weight_temp=discard_outlier(one_min_weight) #呼叫。除掉outlier，傳回資料放在one_weight_temp
                     weight_FLUID.append(np.mean(one_weight_temp))   #將已去除outlier的數字計算平均，並加入重量紀錄主串列weight_Fluid
                     time_INDEX.append(time.strftime("%Y-%m-%d %H:%M")) #將目前時間加入時間記錄主串列time_INDEX
-                    plot_scatter() 
+                    MAIN_DISPLAY('plot',weight_FLUID,weight_PREVIOUS) #去畫圖
                     one_min_weight=[]
                 else:
                     weight_FLUID.append(weight_FLUID[-1]) #等於上一分的數字   
                     time_INDEX.append(time.strftime("%Y-%m-%d %H:%M")) #將目前時間加入時間記錄主串列time_INDEX
-                    plot_scatter() 
+                    MAIN_DISPLAY('plot',weight_FLUID,weight_PREVIOUS) 
                     pass 
 
 #每5分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
                 if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
                     five_weight_change=calculate_weight_changes(10) #呼叫。取倒數10個計算重量變化
-                    PRINT("最近十分鐘尿量:"+str(five_weight_change))
+                    MAIN_DISPLAY('print',"最近十分鐘尿量:"+str(five_weight_change),'')
         #利用重量變化計算趨勢與估計未來尿量
                     five_regression=calculate_regression(weight_FLUID,10)   #呼叫。以每分鐘重量差，評估趨勢（至少10個的時候才跑回歸計算趨勢）
                     if five_regression[1] < 0:
-                        PRINT("趨勢：減少")
+                        MAIN_DISPLAY('print',"趨勢：減少",'')
                     else:
-                        PRINT("趨勢：穩定或增加")
+                        MAIN_DISPLAY('print',"趨勢：穩定或增加",'')
 
 #每59分或29分紀錄總尿量。不管len(weight_FLUID) >=1，也不指定秒數，只要電腦有空就去做。為了簡化，有考慮一小時存一次即可
             if time.localtime()[4]  == 59 and len(weight_FLUID) >= 1:
