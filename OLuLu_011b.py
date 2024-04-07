@@ -466,7 +466,7 @@ def good_bye(): #按A或B鍵結束
 def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp
     adjusted_time=time.time()+delta_timestamp
-    time_INDEX.append(datetime.fromtimestamp(adjusted_time)) #改成用調整時間
+    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))) #改成用調整時間
     initial_weight_temp=initial_value()
     weight_FLUID.append(initial_weight_temp)
     DISPLAY('','初始值:'+str(weight_FLUID[0])+'; '+time_INDEX[0])
@@ -513,7 +513,7 @@ def main():
                     one_weight_temp=discard_outlier(one_min_weight) #呼叫。除掉outlier，傳回資料放在one_weight_temp
                     weight_FLUID.append(np.mean(one_weight_temp))   #將已去除outlier的數字計算平均，並加入重量紀錄主串列weight_Fluid
                     adjusted_time=time.time()+float(delta_timestamp)
-                    time_INDEX.append(datetime.fromtimestamp(adjusted_time)) #改成用調整時間，將目前時間加入時間記錄主串列time_INDEX
+                    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time)))#改成用調整時間，將目前時間加入時間記錄主串列time_INDEX
                     DISPLAY('','') #去畫圖
                     one_min_weight=[]
                 else:
