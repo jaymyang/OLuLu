@@ -118,6 +118,7 @@ def INPUT():
 #######################################################################################
 #以下是更改時間用函式
 def DELTA_TIME():
+    global YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time
     def YEAR(action):
         global YEAR_action,Yr,Mo,D,Hr,Min
         if action=='P':
@@ -204,53 +205,8 @@ def DELTA_TIME():
     def modify_ok():
         global modify_time
         modify_time='@'
-#-----------------------------------------------------------------------------------------------------       
-    def MODIFY_TIME():
-        global YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time
-        while True:
-            if YEAR_action==1:
-                YEAR_action=='nil'
-                Year_set.config(text=str(Yr)+'年') 
-            if MONTH_action==1:
-                MONTH_action=='nil'
-                Month_set.config(text=str(Mo)+'月')            
-            if DAY_action==1:
-                DAY_action=='nil'
-                Day_set.config(text=str(D)+'日') 
-            if HOUR_action==1:
-                HOUR_action=='nil'
-                Hour_set.config(text=str(Hr)+'時') 
-            if MINUTE_action==1:
-                MINUTE_action=='nil'
-                Minute_set.config(text=str(Min)+'分') 
-            if modify_time=='@':
-                gui.remove(Year_set)
-                gui.remove(Month_set)
-                gui.remove(Day_set)
-                gui.remove(Hour_set)
-                gui.remove(Minute_set)
-                gui.remove(Year_p)
-                gui.remove(Month_p)
-                gui.remove(Day_p)
-                gui.remove(Hour_p)
-                gui.remove(Minute_p)
-                gui.remove(Year_m)
-                gui.remove(Month_m)
-                gui.remove(Day_m)
-                gui.remove(Hour_m)
-                gui.remove(Minute_m)
-                gui.remove(Modify_OK)
-                current_time=str(Hr)+':'+str(Min)+' '+str(Mo)+' '+str(D)+' '+str(Yr)
-                current_time=time.mktime(time.strptime(current_time,"%H:%M %m %d %Y"))
-                delta_time=current_time-time.time() #這個要丟回去
-                #print(str(Yr)+str(Mo)+str(D)+str(Hr)+str(Min))
-                #print(delta_timestamp)
-            #gui.remove(Date_Time)
-                return delta_time #這個很重要，會用來改變現在的時間
-                break
-            else:
-                pass
- #----------------------------------------------------------------------------------------------------- 
+
+#-----------------------------------------------------------------------------------------------------   
     Year_set=gui.draw_text(x=120,y=60, text=str(Yr)+'年', color='red', origin='center',font_size=18)
     Month_set=gui.draw_text(x=120,y=110, text=str(Mo)+'月', color='red', origin='center',font_size=18)
     Day_set=gui.draw_text(x=120,y=160, text=str(D)+'日', color='red', origin='center',font_size=18)
@@ -269,7 +225,53 @@ def DELTA_TIME():
     Minute_p=gui.add_button(x=35, y=260, w=60, h=30, text="+", origin='center', onclick=lambda: MINUTE('P')) 
     Minute_m=gui.add_button(x=205, y=260, w=60, h=30, text="-", origin='center', onclick=lambda: MINUTE('M')) 
     Modify_OK=gui.add_button(x=120, y=300, w=60,h=30, text="OK", origin='center', onclick=lambda: modify_ok())
-    time.sleep(0.1)
+                
+    while True:
+        if YEAR_action==1:
+            YEAR_action=='nil'
+            Year_set.config(text=str(Yr)+'年') 
+        if MONTH_action==1:
+            MONTH_action=='nil'
+            Month_set.config(text=str(Mo)+'月')            
+        if DAY_action==1:
+            DAY_action=='nil'
+            Day_set.config(text=str(D)+'日') 
+        if HOUR_action==1:
+            HOUR_action=='nil'
+            Hour_set.config(text=str(Hr)+'時') 
+        if MINUTE_action==1:
+            MINUTE_action=='nil'
+            Minute_set.config(text=str(Min)+'分') 
+        if modify_time=='@':
+            gui.remove(Year_set)
+            gui.remove(Month_set)
+            gui.remove(Day_set)
+            gui.remove(Hour_set)
+            gui.remove(Minute_set)
+            gui.remove(Year_p)
+            gui.remove(Month_p)
+            gui.remove(Day_p)
+            gui.remove(Hour_p)
+            gui.remove(Minute_p)
+            gui.remove(Year_m)
+            gui.remove(Month_m)
+            gui.remove(Day_m)
+            gui.remove(Hour_m)
+            gui.remove(Minute_m)
+            gui.remove(Modify_OK)
+            current_time=str(Hr)+':'+str(Min)+' '+str(Mo)+' '+str(D)+' '+str(Yr)
+            current_time=time.mktime(time.strptime(current_time,"%H:%M %m %d %Y"))
+            delta_time=float(current_time-time.time()) #這個要丟回去
+            #print(str(Yr)+str(Mo)+str(D)+str(Hr)+str(Min))
+            #print(delta_timestamp)
+            #gui.remove(Date_Time)
+            return delta_time #這個很重要，會用來改變現在的時間
+            break
+        else:
+            time.sleep(0.1)
+
+
+    
 ##########################################################################################################
 #以下是秤重時的顯示用函式
 def DISPLAY(action,message3):
@@ -463,7 +465,7 @@ def good_bye(): #按A或B鍵結束
 
 def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp
-    adjusted_time=time.time()+float(delta_timestamp)
+    adjusted_time=time.time()+delta_timestamp
     time_INDEX.append(datetime.fromtimestamp(adjusted_time)) #改成用調整時間
     initial_weight_temp=initial_value()
     weight_FLUID.append(initial_weight_temp)
