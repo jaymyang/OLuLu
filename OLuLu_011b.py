@@ -264,25 +264,21 @@ def DELTA_TIME():
             delta_time=float(current_time-time.time()) #這個要丟回去
             #print(str(Yr)+str(Mo)+str(D)+str(Hr)+str(Min))
             #print(delta_timestamp)
-            #gui.remove(Date_Time)
+            gui.remove(Date_Time)
             return delta_time #這個很重要，會用來改變現在的時間
             break
         else:
             time.sleep(0.1)
 
-
-    
 ##########################################################################################################
-#以下是秤重時的顯示用函式
+#以下是監測重量時的顯示函式
 def DISPLAY(action,message3):
     gui.clear() #每次都先擦掉
-    #def PRINT(message3,action):
-    global weight_FLUID,weight_PREVIOUS
-    global display_text
-    message2=weight_PREVIOUS
-    message1=weight_FLUID
+    global weight_FLUID,weight_PREVIOUS, display_text
+    message2=weight_PREVIOUS #用message2代替weight_PREVIOUS，免得破壞主資料陣列
+    message1=weight_FLUID    #用message1代替weight_FLUID，免得破壞主資料陣列
         
-    if message2==[]: #message2是接受傳來的weight_PREVIOUS。這裡分開，免得最重要的被弄壞
+    if message2==[]: #第一輪沒有weight_PREVIOUS，所以只需要顯示weight_FLUID
         weight_plot=message1
     else:
         weight_plot=message2+message1 #合併已存檔的資料（順序在前）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料
@@ -306,13 +302,11 @@ def DISPLAY(action,message3):
     if action=='clean':
         gui.clear()
     time.sleep(0.1)
-
  
         
     #global display_text, weight_PREVIOUS,weight_FLUID,period_minute,display_text #計畫上限畫到多少？暫定1000公克好了
     #display_text=''
 ##########################################################################################################  
-
 # Function to get weight from Arduino
 def initial_value():
     while True:
@@ -339,13 +333,16 @@ def get_weight():
             i=i+1
             time.sleep(0.1)
             pass
-   
+   #負值視為異常。惟應注意實際應用上有可能導致重量暴增之情形。
     if data_temp < -100 and data_temp > -999: #-100~-999 之間，表示可能有大減，應該要重設毛皮，且回傳0
         arduinoSerial.close()
         arduinoSerial.open() #重設serial
         weight_temp=0 #回傳為0
         DISPLAY('','weight_temp<-100')
     elif data_temp ==-999: #如果跑完還是-999，表示本秒沒抓到；但是假如什麼也不做，回傳的就會是''
+        weight_temp=-999
+        pass
+    elif data_temp >2500: #顯然過重
         weight_temp=-999
         pass
     elif data_temp < -999: #>-999，表示有問題，應該要重設毛皮，且回傳0
@@ -414,11 +411,10 @@ def calculate_regression(analysis_wt, n_of_elements):
     return model.intercept_, model.coef_
 
 # Function to save data
-def saving_data(saving_time, saving_weight, cutting_index):
+def saving_data(saving_time, saving_weight, cutting_index): #位置一為time_INDEX，二是weight_FLUID，三是分鐘
     if saving_weight:
         hour_weight_change = calculate_weight_changes(0)#從0開始算，該函式回傳數值weight_sum在此會放進hour_weight_change。
         time_marker = time.strftime("%Y-%m-%d, %H:%M")
-        #DISPLAY('',"30分鐘重量變化："+ str(round(hour_weight_change)))#每30分的加總統計。
 
         saving_time_upper = [t for t in saving_time if int(t[-2:]) < 30]#表示這是00-29分的資料，放進上半。t指time，w指weight
         saving_weight_upper = [w for t, w in zip(saving_time, saving_weight) if int(t[-2:]) < 30] #把兩個串列裡相同位置的元素配在一起
@@ -462,7 +458,6 @@ def good_bye(): #按A或B鍵結束
 
 ###################################################################################################################################   
 #主函式
-
 def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp
     adjusted_time=time.time()+delta_timestamp
@@ -471,7 +466,7 @@ def main():
     weight_FLUID.append(initial_weight_temp)
     DISPLAY('','初始值:'+str(weight_FLUID[0])+'; '+time_INDEX[0])
 
-    if time.localtime()[4] == 29 or 59:
+    if time.localtime()[4] == 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
         time.sleep(60)
 
     current_minute = 61
@@ -487,7 +482,7 @@ def main():
     while True:
                     
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複
-            if action=="clean":
+            if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。這也是為什麼在執行到這裡之前按下A/B都不會有反應。
                 break
 
             if time.localtime()[4] != current_minute: #current_time代表以下程式區塊所執行的時間。time.localtime[4]不等於current_time時，表示是新的分鐘
@@ -530,10 +525,8 @@ def main():
                     five_regression=calculate_regression(weight_FLUID,10)   #呼叫。以每分鐘重量差，評估趨勢（至少10個的時候才跑回歸計算趨勢）
                     if five_regression[1] < 0:
                         DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：減少")
-
                     else:
-                        DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：穩定或增加")                   
-                        
+                        DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：穩定或增加") 
 
         #每59分或29分紀錄總尿量。不管len(weight_FLUID) >=1，也不指定秒數，只要電腦有空就去做。為了簡化，有考慮一小時存一次即可
                 if time.localtime()[4]  == 59 and len(weight_FLUID) >= 1:
