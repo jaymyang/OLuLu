@@ -286,13 +286,13 @@ def DISPLAY(action,message3):
     for yn in range(0,301,20): #畫出格線
         x_grid=gui.draw_line(x0=1, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#繪橫線
     for xn in range(0,240,20):
-        y_grid=gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #繪縱線
+        y_grid=gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #繪縱線；考慮範圍要有負數，也就大約是-100~+800（話說回來，一班有800mL的小便大概也不大需要擔心）
         
     x_cor = np.arange(0,len(weight_plot),1) 
     x_cor=x_cor[::-1]
     for i in range(0,len(weight_plot)-1,1):
             #gui.fill_circle(x=240-4*x_cor[i], y=round(300-weight_plot[i]/3), r=2, color="blue")
-        scatter=gui.draw_line(x0=240-4*x_cor[i]-2, y0=300,x1=240-4*x_cor[i]-2, y1=round(300-weight_plot[i]/3)-1, width=3, color="blue") #繪圖
+        scatter=gui.draw_line(x0=240-4*x_cor[i]-2, y0=270,x1=240-4*x_cor[i]-2, y1=round(270-weight_plot[i]/3)-1, width=3, color="blue") #繪圖
     if message3=='':
         message3=display_text #display_text是用來再現先前所顯示的內容
     else:
