@@ -2,15 +2,15 @@
 # 由於如果使用maplotlib，無法使用Unihiker的A/B鍵功能，改成自己畫圖。
 import time
 
-import csv
-import numpy as np
-import serial
-import serial.tools.list_ports
-import warnings
-import sys
-from unihiker import GUI   # Import the package
-from sklearn.linear_model import LinearRegression
-from datetime import datetime
+import csv #讀寫csv檔
+import numpy as np #主要數學運算用
+import serial #序列埠通訊
+import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
+import warnings #為了避開有的沒的警告
+import sys #用來結束程式用
+from unihiker import GUI   # Unihier GUI package
+from sklearn.linear_model import LinearRegression #回歸用
+from datetime import datetime #為了轉換時間格式方便
 
 gui = GUI() 
 txt=gui.draw_text(text="",x=120,y=10,font_size=12,origin="center",color="#0000FF")
