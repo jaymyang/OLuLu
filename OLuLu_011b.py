@@ -14,6 +14,7 @@ from datetime import datetime #為了轉換時間格式方便
 
 gui = GUI() 
 txt=gui.draw_text(text="",x=120,y=10,font_size=12,origin="center",color="#0000FF")
+#startup_img = gui.draw_image()
 message_text=gui.draw_text() #
 
 global display_text,action, YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time,delta_timestamp
@@ -95,6 +96,7 @@ def INPUT():
     txt=gui.draw_text(text="",x=120,y=10,font_size=16,origin="center",color="#0000FF")
                
     while True:
+        gui.remove(startup_img)
         if '@' in string_input:
             gui.remove(txt)
             gui.remove(B1)
@@ -277,22 +279,34 @@ def DISPLAY(action,message3):
     global weight_FLUID,weight_PREVIOUS, display_text
     message2=weight_PREVIOUS #用message2代替weight_PREVIOUS，免得破壞主資料陣列
     message1=weight_FLUID    #用message1代替weight_FLUID，免得破壞主資料陣列
-        
+#-------------------------------------------------------------
+    def DRAW_Y(scale,color_code,weight_plot):
+        for y_tick in range(300,0,-20): #這三個數字是座標點
+            y_axis_label=gui.draw_text(x=10,y=y_tick, text=round(scale/5*(650-2.5*y_tick)), color='black', origin='center',font_size=6)
+        for i in range(0,len(weight_plot)-1,1):
+            if weight_plot[i] < 0:
+                scatter=gui.draw_line(x0=240-4*x_cor[i]-3, y0=260,x1=240-4*x_cor[i]-3, y1=round(260-weight_plot[i]/scale)-1, width=3, color="black") #負值用黑線繪圖
+            else:
+                scatter=gui.draw_line(x0=240-4*x_cor[i]-3, y0=260,x1=240-4*x_cor[i]-3, y1=round(260-weight_plot[i]/scale)-1, width=3, color=color_code)#正值依照scale選顏色 
+#-------------------------------------------------------------  
     if message2==[]: #第一輪沒有weight_PREVIOUS，所以只需要顯示weight_FLUID
         weight_plot=message1
     else:
-        weight_plot=message2+message1 #合併已存檔的資料（順序在前）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料
+        weight_plot=message2[-25:]+message1 #合併已存檔的資料（順序在前，只取25個是因為畫面有預留空間顯示標籤）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料。
     
     for yn in range(0,301,20): #畫出格線
-        x_grid=gui.draw_line(x0=1, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#繪橫線
-    for xn in range(0,240,20):
-        y_grid=gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #繪縱線；考慮範圍要有負數，也就大約是-100~+800（話說回來，一班有800mL的小便大概也不大需要擔心）
-        
-    x_cor = np.arange(0,len(weight_plot),1) 
+        x_grid=gui.draw_line(x0=20, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#繪橫線，重量/2.5為座標，故一點=2.5克，上下範圍750克，每格50克，且不排斥負數
+    for xn in range(20,240,20):
+        y_grid=gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #繪縱線，共12線11格，每格5分鐘    
+    x_axis=gui.draw_line(x0=20, y0=260, x1=240, y1=260, width=1, color='black')#繪0參考線    
+    x_cor = np.arange(0,len(weight_plot)-1,1) 
     x_cor=x_cor[::-1]
-    for i in range(0,len(weight_plot)-1,1):
-            #gui.fill_circle(x=240-4*x_cor[i], y=round(300-weight_plot[i]/3), r=2, color="blue")
-        scatter=gui.draw_line(x0=240-4*x_cor[i]-2, y0=270,x1=240-4*x_cor[i]-2, y1=round(270-weight_plot[i]/3)-1, width=3, color="blue") #繪圖
+    if np.max(weight_plot)<325: #改變Y的scale
+        DRAW_Y(2.5,'orange',weight_plot)
+    else:
+        DRAW_Y(5,'blue',weight_plot)
+        
+
     if message3=='':
         message3=display_text #display_text是用來再現先前所顯示的內容
     else:
@@ -323,21 +337,22 @@ def get_weight():
     data_temp=''
     weight_temp=''
     #making_sound(329, 50, 0.1, 1)
-    for i in range(0,10,1):
+    while True:
+        arduinoSerial.reset_input_buffer()
         try:
-            data_in = arduinoSerial.readline().decode('utf-8') #得到的type為string。這個要配合Aduino，只傳整數跟\n。不然就會藏一堆亂七八糟控制碼
-            data_temp=int(data_in)
+            data_in = arduinoSerial.readline().decode('utf-8') #得到的type為string。這個要讓Aduino只傳整數跟\n。不然就會藏一堆亂七八糟控制碼
+            data_temp=int(data_in)            
             break
         except:
-            data_temp=-999 #此時等0.1秒之後再抓一次
-            i=i+1
-            time.sleep(0.1)
+            #data_temp=-999 #此時等0.1秒之後再抓一次
+            #i=i+1
+            #time.sleep(0.1)
             pass
    #負值視為異常。惟應注意實際應用上有可能導致重量暴增之情形。
-    if data_temp < -100 and data_temp > -999: #-100~-999 之間，表示可能有大減，應該要重設毛皮，且回傳0
+    if data_temp < -100 and data_temp > -999: #-100~-999 之間，表示可能有大減，應該要重設毛皮，且回傳0；在測試時發現，就算啥也沒動，還是可能莫名其妙進入這個範圍，所以暫時還是回傳-999
         arduinoSerial.close()
-        arduinoSerial.open() #重設serial
-        weight_temp=0 #回傳為0
+        arduinoSerial.open() #重開serial
+        weight_temp=-999 
         DISPLAY('','weight_temp<-100')
     elif data_temp ==-999: #如果跑完還是-999，表示本秒沒抓到；但是假如什麼也不做，回傳的就會是''
         weight_temp=-999
@@ -345,10 +360,10 @@ def get_weight():
     elif data_temp >2500: #顯然過重
         weight_temp=-999
         pass
-    elif data_temp < -999: #>-999，表示有問題，應該要重設毛皮，且回傳0
-        arduinoSerial.close()
+    elif data_temp < -999: #<-999，表示讀取的資料有問題，應該要重設毛皮，且回傳-999
+        arduinoSerial.close()        
         arduinoSerial.open() #重設serial
-        weight_temp=0 #回傳為0
+        weight_temp=-999 #回傳為-999
         DISPLAY('','weight_temp<-100')
     else:
         weight_temp=data_temp
@@ -449,10 +464,8 @@ def good_bye(): #按A或B鍵結束
         wt = csv.writer(csvfile)
         for save_time, save_weight in zip(time_INDEX,weight_FLUID):
             wt.writerow([save_time, save_weight])
-    #DISPLAY('clean','')
-    #gui.clear()
+
     print('Data saved. Good Bye~')
-    #print('以下為PYTHON訊息')
 
 
 
@@ -504,16 +517,17 @@ def main():
 
         #這一分鐘裡面，前面的10秒收集完以後，去除outlier。目前仍採超過一個標準差法。
                 
-                if len(one_min_weight) > 0 : #要送去跑的話，應該全部是數字，所以這裡判斷不只是空串列，還必須全是數字
+                if len(one_min_weight) > 0 : #要送去跑的話，應該全部是數字，所以這裡判斷不只是空串列，還必須全是數字。如果還是很麻煩，不如不要搞什麼outlier，就是呆呆地每分鐘的00秒接收一次就好。
                     one_weight_temp=discard_outlier(one_min_weight) #呼叫。除掉outlier，傳回資料放在one_weight_temp
                     weight_FLUID.append(np.mean(one_weight_temp))   #將已去除outlier的數字計算平均，並加入重量紀錄主串列weight_Fluid
-                    adjusted_time=time.time()+float(delta_timestamp)
-                    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time)))#改成用調整時間，將目前時間加入時間記錄主串列time_INDEX
+                    adjusted_time=time.time()+delta_timestamp
+                    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間，將目前時間（亦即前16個字元）加入時間記錄主串列time_INDEX
                     DISPLAY('','') #去畫圖
                     one_min_weight=[]
                 else:
-                    weight_FLUID.append(weight_FLUID[-1]) #等於上一分的數字   
-                    time_INDEX.append(time.strftime("%Y-%m-%d %H:%M")) #將目前時間加入時間記錄主串列time_INDEX
+                    weight_FLUID.append(weight_FLUID[-1]) #等於上一分的數字 
+                    adjusted_time=time.time()+delta_timestamp
+                    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間，將目前時間（亦即前16個字元）加入時間記錄主串列time_INDEX
                     DISPLAY('','') #去畫圖
                     pass 
 
@@ -528,12 +542,12 @@ def main():
                     else:
                         DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：穩定或增加") 
 
-        #每59分或29分紀錄總尿量。不管len(weight_FLUID) >=1，也不指定秒數，只要電腦有空就去做。為了簡化，有考慮一小時存一次即可
+        #每59分或29分紀錄總尿量。為了簡化，有考慮一小時存一次即可
                 if time.localtime()[4]  == 59 and len(weight_FLUID) >= 1:
-                    processed_data=saving_data(time_INDEX,weight_FLUID,59) #呼叫。存檔
-                    time_INDEX=processed_data[0] #留下縮減過的資料串列
-                    weight_FLUID=processed_data[1]#留下縮減過的資料串列
-                    weight_PREVIOUS=processed_data[2]
+                    processed_data=saving_data(time_INDEX,weight_FLUID,59) #呼叫存檔函式
+                    time_INDEX=processed_data[0]      #留下縮減過的資料串列
+                    weight_FLUID=processed_data[1]    #留下縮減過的資料串列
+                    weight_PREVIOUS=processed_data[2] #已經存入的資料串列
                     pass
                 elif time.localtime()[4]  == 29 and len(weight_FLUID) >= 1:
                     processed_data=saving_data(time_INDEX,weight_FLUID,29)
@@ -557,26 +571,28 @@ def main():
 if __name__ == '__main__':
     #COM_PORT = 'COM4'  # 需根據實際連結的Arduino的通訊埠，修改設定
     #BAUD_RATES = 9600
+    startup_img = gui.draw_image(x=0, y=0,w=240, h=300,image='../upload/pict/Copyright.png')
     ports = list( serial.tools.list_ports.comports() )
     for port in ports:
         if port.manufacturer.startswith( "Arduino" ):
             COM_PORT = '/dev/'+port.name
-        #PRINT("Arduino device found on " + COM_PORT)
         else:
             continue    
     #MESSAGE("Port:"+COM_PORT)
-    DISPLAY('',"Port:"+COM_PORT)
+    message_text.config(x=1,y=302, font_size=10,text="Port:"+COM_PORT)
+    #DISPLAY('',"Port:"+COM_PORT)
     
 #開始主程式。
     arduinoSerial = serial.Serial(COM_PORT, BAUD_RATES)
     start_time=time.localtime()
     if start_time[4] == 0 or 30:
         time.sleep(60)
+    
     RESULT=INPUT() 
-    #gui.remove(message_text)
     file_name=RESULT+'.csv'
     #MESSAGE('file:'+file_name)
-    DISPLAY('','file:'+file_name)
+    #DISPLAY('','file:'+file_name)
+    message_text.config(x=1,y=302, font_size=10,text='file:'+file_name)
     delta_timestamp=DELTA_TIME()
     warnings.filterwarnings('ignore', module="numpy")
     #warnings.filterwarnings("ignore", module="matplotlib")
@@ -584,9 +600,10 @@ if __name__ == '__main__':
     warnings.filterwarnings('ignore', message='invalid value encountered in divide')
     gui.on_key_click('a',on_click)#按A鍵結束
     gui.on_key_click('b',on_click)
+    
 
     main()
     gui.clear
     good_bye()
-    print('A or B pressed to terminate the application.')
+    print('Olulu ver. 0.11b. Button pressed. Data saved as: '+file_name)
     sys.exit(0)
