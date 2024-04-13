@@ -301,7 +301,7 @@ def DISPLAY(action,message3):
     x_axis=gui.draw_line(x0=20, y0=260, x1=240, y1=260, width=1, color='black')#繪0參考線    
     x_cor = np.arange(0,len(weight_plot)-1,1) 
     x_cor=x_cor[::-1]
-    if np.max(weight_plot)<325: #改變Y的scale
+    if np.max(weight_plot)<350: #改變Y的scale
         DRAW_Y(2.5,'orange',weight_plot)
     else:
         DRAW_Y(5,'blue',weight_plot)
@@ -316,11 +316,7 @@ def DISPLAY(action,message3):
     if action=='clean':
         gui.clear()
     time.sleep(0.1)
- 
-        
-    #global display_text, weight_PREVIOUS,weight_FLUID,period_minute,display_text #計畫上限畫到多少？暫定1000公克好了
-    #display_text=''
-##########################################################################################################  
+ ##############################################################################################  
 # Function to get weight from Arduino
 def initial_value():
     while True:
@@ -332,46 +328,51 @@ def initial_value():
             initial_weight_temp=0
         return initial_weight_temp
         break
-        
-def get_weight():
+#----------------------------------------        
+def get_weight(): #注意：如果這段搞砸了，搬11d的回來用
     data_temp=''
     weight_temp=''
-    #making_sound(329, 50, 0.1, 1)
-    while True:
-        arduinoSerial.reset_input_buffer()
-        try:
-            data_in = arduinoSerial.readline().decode('utf-8') #得到的type為string。這個要讓Aduino只傳整數跟\n。不然就會藏一堆亂七八糟控制碼
-            data_temp=int(data_in)            
+    arduinoSerial.reset_input_buffer()
+    for i in range (0,100,1): #頂多抓個100次
+        data_in = arduinoSerial.readline() #得到的type為string；需要讓Arduino只傳整數跟\n。是否在字串頭加上一個英文字表示是資料頭？
+        if b'\n' in data_in == False: #確定是否接收到完整數字。但如何判斷數字頭呢？
+            time.sleep(0.01)
+            pass
+        else:
+            data_temp=int(data_in.decode('utf-8').rstrip())#試試看加上rstrip()會不會去掉莫名其妙的數字
             break
-        except:
+    
+    #except:
             #data_temp=-999 #此時等0.1秒之後再抓一次
             #i=i+1
             #time.sleep(0.1)
-            pass
+        #pass
    #負值視為異常。惟應注意實際應用上有可能導致重量暴增之情形。
-    if data_temp < -100 and data_temp > -999: #-100~-999 之間，表示可能有大減，應該要重設毛皮，且回傳0；在測試時發現，就算啥也沒動，還是可能莫名其妙進入這個範圍，所以暫時還是回傳-999
-        arduinoSerial.close()
-        arduinoSerial.open() #重開serial
-        weight_temp=-999 
-        DISPLAY('','weight_temp<-100')
-    elif data_temp ==-999: #如果跑完還是-999，表示本秒沒抓到；但是假如什麼也不做，回傳的就會是''
-        weight_temp=-999
-        pass
-    elif data_temp >2500: #顯然過重
-        weight_temp=-999
-        pass
-    elif data_temp < -999: #<-999，表示讀取的資料有問題，應該要重設毛皮，且回傳-999
-        arduinoSerial.close()        
-        arduinoSerial.open() #重設serial
-        weight_temp=-999 #回傳為-999
-        DISPLAY('','weight_temp<-100')
-    else:
-        weight_temp=data_temp
-          
-    arduinoSerial.reset_input_buffer()
-    #print('weight_temp',weight_temp)
-    return weight_temp
+   # if data_temp < -100 and data_temp > -999: #-100~-999 之間，表示可能有大減，應該要重設毛皮，且回傳0；在測試時發現，就算啥也沒動，還是可能莫名其妙進入這個範圍，所以暫時還是回傳-999
+   #     arduinoSerial.close()
+   #     arduinoSerial.open() #重開serial
+   #     weight_temp=-999 
+   #     DISPLAY('','weight_temp<-100')
+   # elif data_temp ==-999: #如果跑完還是-999，表示本秒沒抓到；但是假如什麼也不做，回傳的就會是''
+   #     weight_temp=-999
+   #     pass
+   # elif data_temp >2500: #顯然過重
+   #     weight_temp=-999
+   #     pass
+   # elif data_temp < -999: #<-999，表示讀取的資料有問題，應該要重設毛皮，且回傳-999
+   #     arduinoSerial.close()        
+   #     arduinoSerial.open() #重設serial
+   #     weight_temp=-999 #回傳為-999
+   #     DISPLAY('','weight_temp<-100')
+   # else:
+   #     weight_temp=data_temp
+   #       
+   # arduinoSerial.reset_input_buffer()
+   # #print('weight_temp',weight_temp)
+    weight_temp=data_temp
 
+    return weight_temp
+#----------------------------------------------------------
 # Function to discard outliers
 def discard_outlier(wt_list): #假如信任秤，應該也可以取眾數就好  
     wt_array = np.array(wt_list) #轉換為array
@@ -406,7 +407,6 @@ def calculate_weight_changes(start_element):#呼叫時，要指定從串列的�
             if small_volume<10:#這裡是預設在一個尿量波動很小的範圍的時候，直接用最大值減最小值來估計就好。不管每5分鐘或每小時，都用10gm
                 weight_Sum=small_volume
     DISPLAY('',"小計:"+str(weight_sum))
-    
     return weight_sum
     
 
@@ -465,11 +465,11 @@ def good_bye(): #按A或B鍵結束
         for save_time, save_weight in zip(time_INDEX,weight_FLUID):
             wt.writerow([save_time, save_weight])
 
-    print('Data saved. Good Bye~')
+    print('Data saved as: '+file_name+'. Good Bye~')
 
 
 
-###################################################################################################################################   
+########################################################################################################################  
 #主函式
 def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp
@@ -478,8 +478,10 @@ def main():
     initial_weight_temp=initial_value()
     weight_FLUID.append(initial_weight_temp)
     DISPLAY('','初始值:'+str(weight_FLUID[0])+'; '+time_INDEX[0])
-
-    if time.localtime()[4] == 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
+    #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
+    adjusted_time=time.time()+delta_timestamp
+    if datetime.fromtimestamp(adjusted_time).minute== 29 or 59:
+    #if time.localtime()[4] == 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
         time.sleep(60)
 
     current_minute = 61
@@ -492,13 +494,12 @@ def main():
     weight_PREVIOUS=[] #忘記先前為什麼改設空
 
     #以下開始
-    while True:
-                    
+    while True:                    
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複
             if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。這也是為什麼在執行到這裡之前按下A/B都不會有反應。
                 break
 
-            if time.localtime()[4] != current_minute: #current_time代表以下程式區塊所執行的時間。time.localtime[4]不等於current_time時，表示是新的分鐘
+            if time.localtime()[4] != current_minute: #current_time代表以下程式區塊所執行的時間。time.localtime[4]不等於current_time時，表示是新的一分鐘
                 current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
                 #weight_flag=0
                 one_min_weight=[]
@@ -515,20 +516,20 @@ def main():
                         else:
                             one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
 
-        #這一分鐘裡面，前面的10秒收集完以後，去除outlier。目前仍採超過一個標準差法。
-                
+        #這一分鐘裡面，前面的10秒收集完以後，去除outlier。目前仍採超過一個標準差法。                
                 if len(one_min_weight) > 0 : #要送去跑的話，應該全部是數字，所以這裡判斷不只是空串列，還必須全是數字。如果還是很麻煩，不如不要搞什麼outlier，就是呆呆地每分鐘的00秒接收一次就好。
+                    DISPLAY('',one_min_weight) #去畫圖                    
                     one_weight_temp=discard_outlier(one_min_weight) #呼叫。除掉outlier，傳回資料放在one_weight_temp
                     weight_FLUID.append(np.mean(one_weight_temp))   #將已去除outlier的數字計算平均，並加入重量紀錄主串列weight_Fluid
                     adjusted_time=time.time()+delta_timestamp
-                    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間，將目前時間（亦即前16個字元）加入時間記錄主串列time_INDEX
-                    DISPLAY('','') #去畫圖
+                    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
+                    DISPLAY('',one_min_weight) #去畫圖
                     one_min_weight=[]
                 else:
                     weight_FLUID.append(weight_FLUID[-1]) #等於上一分的數字 
                     adjusted_time=time.time()+delta_timestamp
-                    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間，將目前時間（亦即前16個字元）加入時間記錄主串列time_INDEX
-                    DISPLAY('','') #去畫圖
+                    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
+                    DISPLAY('',one_min_weight) #去畫圖
                     pass 
 
         #每5分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
@@ -572,38 +573,32 @@ if __name__ == '__main__':
     #COM_PORT = 'COM4'  # 需根據實際連結的Arduino的通訊埠，修改設定
     #BAUD_RATES = 9600
     startup_img = gui.draw_image(x=0, y=0,w=240, h=300,image='../upload/pict/Copyright.png')
+    time.sleep(5)
     ports = list( serial.tools.list_ports.comports() )
     for port in ports:
         if port.manufacturer.startswith( "Arduino" ):
             COM_PORT = '/dev/'+port.name
         else:
             continue    
-    #MESSAGE("Port:"+COM_PORT)
     message_text.config(x=1,y=302, font_size=10,text="Port:"+COM_PORT)
-    #DISPLAY('',"Port:"+COM_PORT)
     
 #開始主程式。
-    arduinoSerial = serial.Serial(COM_PORT, BAUD_RATES)
+    arduinoSerial = serial.Serial(COM_PORT, BAUD_RATES) #開啟port
     start_time=time.localtime()
-    if start_time[4] == 0 or 30:
-        time.sleep(60)
-    
-    RESULT=INPUT() 
+#    if start_time[4] == 0 or 30:
+#        time.sleep(60)    
+    RESULT=INPUT()  #輸入病歷號
     file_name=RESULT+'.csv'
-    #MESSAGE('file:'+file_name)
-    #DISPLAY('','file:'+file_name)
     message_text.config(x=1,y=302, font_size=10,text='file:'+file_name)
-    delta_timestamp=DELTA_TIME()
+    delta_timestamp=DELTA_TIME() #輸入現在時間
     warnings.filterwarnings('ignore', module="numpy")
-    #warnings.filterwarnings("ignore", module="matplotlib")
     warnings.filterwarnings('ignore', message='invalid value encountered in scalar divide')
     warnings.filterwarnings('ignore', message='invalid value encountered in divide')
     gui.on_key_click('a',on_click)#按A鍵結束
     gui.on_key_click('b',on_click)
     
-
     main()
     gui.clear
     good_bye()
-    print('Olulu ver. 0.11b. Button pressed. Data saved as: '+file_name)
+    print('Olulu ver. 0.11b. A or B Button pressed.')
     sys.exit(0)
