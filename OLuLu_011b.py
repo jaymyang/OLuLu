@@ -334,13 +334,35 @@ def get_weight(): #注意：如果這段搞砸了，搬11d的回來用
     weight_temp=''
     arduinoSerial.reset_input_buffer()
     for i in range (0,100,1): #頂多抓個100次
-        data_in = arduinoSerial.readline() #得到的type為string；需要讓Arduino只傳整數跟\n。是否在字串頭加上一個英文字表示是資料頭？
-        if b'\n' in data_in == False: #確定是否接收到完整數字。但如何判斷數字頭呢？
+        data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。
+        if b'\n' in data_in and str(data_in.decode('utf-8')[0])=='A':
+            data_temp=str(data_in.decode('utf-8').rstrip())#加上rstrip()去掉末尾
+            for j in range(len(data_temp)):
+                if data_temp[j] in ['-','1','2','3','4','5','6','7','8','9','0']:
+                    weight_temp=weight_temp+data_temp[j] #組合起來                   
+                else:
+                    pass
+            break
+        else:
             time.sleep(0.01)
             pass
-        else:
-            data_temp=int(data_in.decode('utf-8').rstrip())#試試看加上rstrip()會不會去掉莫名其妙的數字
-            break
+            
+            
+        #if b'\n' in data_in == False: #確定是否接收到完整數字。但如何判斷數字頭呢？
+        #    time.sleep(0.01)
+        #    pass
+        #else: 
+        #    data_temp=str(data_in.decode('utf-8').rstrip())#加上rstrip()去掉末尾
+        #    if data_temp[0] =='A': #表示確定有抓到資料頭
+        #        for j in range(len(data_temp)):
+        #            if data_temp[j] in ['-','1','2','3','4','5','6','7','8','9','0']:
+        #                weight_temp=weight_temp+data_temp[j] #組合起來                   
+        #            else:
+        #                pass
+        #    else:
+        #        time.sleep(0.01)
+        #        pass
+        #    break
     
     #except:
             #data_temp=-999 #此時等0.1秒之後再抓一次
@@ -369,7 +391,7 @@ def get_weight(): #注意：如果這段搞砸了，搬11d的回來用
    #       
    # arduinoSerial.reset_input_buffer()
    # #print('weight_temp',weight_temp)
-    weight_temp=data_temp
+    weight_temp=int(weight_temp)
 
     return weight_temp
 #----------------------------------------------------------
