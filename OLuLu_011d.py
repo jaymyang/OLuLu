@@ -283,16 +283,17 @@ def DISPLAY(action,message3):
     def DRAW_Y(scale,color_code,weight_plot):
         for y_tick in range(300,0,-20): #這三個數字是座標點
             y_axis_label=gui.draw_text(x=10,y=y_tick, text=round(scale/2.5*(650-2.5*y_tick)), color='black', origin='center',font_size=6)
+        x_axis_label=gui.draw_text(x=120,y=301, text="-30 min", color='black', origin='center',font_size=6)
         for i in range(0,len(weight_plot)-1,1):
             if weight_plot[i] < 0:
-                scatter=gui.draw_line(x0=240-4*x_cor[i]-2, y0=260,x1=240-4*x_cor[i]-3, y1=round(260-weight_plot[i]/scale)-1, width=3, color="black") #負值用黑線繪圖；照講寬度應該是要留4
+                scatter=gui.draw_line(x0=238-4*x_cor[i], y0=260,x1=238-4*x_cor[i], y1=round(260-weight_plot[i]/scale)-1, width=3, color="black") #負值用黑線繪圖；照講寬度應該是要留4
             else:
-                scatter=gui.draw_line(x0=240-4*x_cor[i]-2, y0=260,x1=240-4*x_cor[i]-3, y1=round(260-weight_plot[i]/scale)-1, width=3, color=color_code)#正值依照scale選顏色 
+                scatter=gui.draw_line(x0=238-4*x_cor[i], y0=260,x1=238-4*x_cor[i], y1=round(260-weight_plot[i]/scale)-1, width=3, color=color_code)#正值依照scale選顏色 
 #-------------------------------------------------------------  
     if message2==[]: #第一輪沒有weight_PREVIOUS，所以只需要顯示weight_FLUID
         weight_plot=message1
     else:
-        weight_plot=message2[-25:]+message1 #合併已存檔的資料（放在前，只取25個是因為畫面有預留空間給標籤）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料。
+        weight_plot=message2[-23:]+message1 #合併已存檔的資料（放在前，只取25個是因為畫面有預留空間給標籤）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料。
     
     for yn in range(0,301,20): #畫出格線
         x_grid=gui.draw_line(x0=20, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#繪橫線，重量/2.5為座標，故一點=2.5克，上下範圍750克，每格50克，且不排斥負數
