@@ -285,9 +285,9 @@ def DISPLAY(action,message3):
             y_axis_label=gui.draw_text(x=10,y=y_tick, text=round(scale/2.5*(650-2.5*y_tick)), color='black', origin='center',font_size=6)
         for i in range(0,len(weight_plot)-1,1):
             if weight_plot[i] < 0:
-                scatter=gui.draw_line(x0=240-4*x_cor[i]-3, y0=260,x1=240-4*x_cor[i]-3, y1=round(260-weight_plot[i]/scale)-1, width=3, color="black") #負值用黑線繪圖
+                scatter=gui.draw_line(x0=240-4*x_cor[i]-2, y0=260,x1=240-4*x_cor[i]-3, y1=round(260-weight_plot[i]/scale)-1, width=3, color="black") #負值用黑線繪圖；照講寬度應該是要留4
             else:
-                scatter=gui.draw_line(x0=240-4*x_cor[i]-3, y0=260,x1=240-4*x_cor[i]-3, y1=round(260-weight_plot[i]/scale)-1, width=3, color=color_code)#正值依照scale選顏色 
+                scatter=gui.draw_line(x0=240-4*x_cor[i]-2, y0=260,x1=240-4*x_cor[i]-3, y1=round(260-weight_plot[i]/scale)-1, width=3, color=color_code)#正值依照scale選顏色 
 #-------------------------------------------------------------  
     if message2==[]: #第一輪沒有weight_PREVIOUS，所以只需要顯示weight_FLUID
         weight_plot=message1
@@ -297,10 +297,10 @@ def DISPLAY(action,message3):
     for yn in range(0,301,20): #畫出格線
         x_grid=gui.draw_line(x0=20, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#繪橫線，重量/2.5為座標，故一點=2.5克，上下範圍750克，每格50克，且不排斥負數
     for xn in range(20,240,20):
-        y_grid=gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #繪縱線，共12線11格，每格5分鐘    
+        y_grid=gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #繪縱線，共12線11格，每格20點，5分鐘    
     x_axis=gui.draw_line(x0=20, y0=260, x1=240, y1=260, width=1, color='black')#繪0參考線    
     x_cor = np.arange(0,len(weight_plot)-1,1) 
-    x_cor=x_cor[::-1]
+    x_cor=x_cor[::-1] #逆轉順序以供繪圖
     if np.max(weight_plot)<350: #改變Y的scale
         DRAW_Y(1.25,'orange',weight_plot)
     else:
@@ -394,7 +394,7 @@ def get_weight(): #注意：如果這段搞砸了，搬11d的回來用
    # #print('weight_temp',weight_temp)
     
     weight_temp=int(weight_temp)#加上一個簡單的異常數字判斷
-    if weight_temp <-1000 or weight_temp >1000:
+    if weight_temp <-1000 or weight_temp >3000:
         weight_temp=-999
     else:
         pass
@@ -547,6 +547,8 @@ def main():
                                 one_min_weight.append(one_min_weight[-1]) #本秒鐘回傳為空，就重複同一分鐘內上一秒的數字。
                             else:
                                 one_min_weight.append(0)#如果真的是空，就當作0吧          
+                        elif one_sec_weight-weight_FLUID[-1]>100: #不大可能一秒鐘比上一分鐘的重量多100克
+                            pass
                         else:
                             one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
 
