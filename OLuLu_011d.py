@@ -1,5 +1,12 @@
 # On Line urine Lever urility ver 0.11d 本版是特別為了追蹤異常讀數而由b版增添了儲存原讀數的功能
 # 由於如果使用maplotlib，無法使用Unihiker的A/B鍵功能，改成自己畫圖。
+from unihiker import GUI   # Unihier GUI package
+gui = GUI() 
+startup_img = gui.draw_image(x=0, y=0,w=240, h=300,image='../upload/pict/Copyright.png')
+txt=gui.draw_text(text="",x=120,y=10,font_size=12,origin="center",color="#0000FF")
+message_text=gui.draw_text() #
+message_text.config(x=1,y=302, font_size=10,text="Starting up")
+
 import time
 import csv #讀寫csv檔
 import numpy as np #主要數學運算用
@@ -7,14 +14,8 @@ import serial #序列埠通訊
 import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
 import warnings #為了避開有的沒的警告
 import sys #用來結束程式用
-from unihiker import GUI   # Unihier GUI package
 from sklearn.linear_model import LinearRegression #回歸用
 from datetime import datetime #為了轉換時間格式方便
-
-gui = GUI() 
-startup_img = gui.draw_image(x=0, y=0,w=240, h=300,image='../upload/pict/Copyright.png')
-txt=gui.draw_text(text="",x=120,y=10,font_size=12,origin="center",color="#0000FF")
-message_text=gui.draw_text() #
 
 global display_text,action, YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time,delta_timestamp
 # Initialize variables
@@ -512,7 +513,7 @@ def main():
     time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))) #改成用調整時間
     initial_weight_temp=initial_value()
     weight_FLUID.append(initial_weight_temp)
-    weight_RAE.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
+    weight_RAW.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
     DISPLAY('','初始值:'+str(weight_FLUID[0])+'; '+time_INDEX[0])
     #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
     adjusted_time=time.time()+delta_timestamp
@@ -523,6 +524,7 @@ def main():
     current_minute = 61
     five_weight_change=10
     one_min_weight=-999
+    
     #以下是設定比較回歸預測準確性所需的變數，預計在這個精簡版不會使用
     prediction_selection=None
     previous_prediction_15=[0,0]
@@ -542,15 +544,23 @@ def main():
 
                 while time.localtime()[5] in period_second:
                     current_second=time.localtime()[5]
+                    
                     if time.localtime()[4] != current_second:
-                        one_sec_weight=get_weight()
+                        one_sec_abn=0
+                        one_sec_weight=get_weight() #回傳的數字會放在one_sec_weight
                         if one_sec_weight == -999 : #要確定不是空串列
                             if len(one_min_weight)>1:#one_min_weight不能為空啊~
                                 one_min_weight.append(one_min_weight[-1]) #本秒鐘回傳為空，就重複同一分鐘內上一秒的數字。
                             else:
                                 one_min_weight.append(0)#如果真的是空，就當作0吧          
-                        elif one_sec_weight-weight_FLUID[-1]>100: #不大可能一秒鐘比上一分鐘的重量多100克
-                            pass
+                        elif len(weight_FLUID)>0 and one_sec_abn<3 : #如果是空陣列就會出現錯誤
+                            if one_sec_weight-int(weight_FLUID[-1]) > 100: #不大可能一秒鐘比上一分鐘的重量多100克
+                                one_sec_abn=one_sec_abn+1
+                                pass
+                        elif len(weight_FLUID)=0 and one_sec_abn<3 : 
+                            if one_sec_weight-int(weight_PREVIOUS[-1]) > 100: #出包的狀況是在每半小時切點後，可能weight_FLUID變成空陣列。所以改用PREVIOUS
+                                one_sec_abn=one_sec_abn+1
+                                pass #one_sec_abn<3用來判斷是來處理突然大量尿液流入。假如連續三秒都是>100，那就是真的
                         else:
                             one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
 
