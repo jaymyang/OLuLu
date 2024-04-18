@@ -512,6 +512,7 @@ def main():
     time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))) #改成用調整時間
     initial_weight_temp=initial_value()
     weight_FLUID.append(initial_weight_temp)
+    weight_RAE.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
     DISPLAY('','初始值:'+str(weight_FLUID[0])+'; '+time_INDEX[0])
     #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
     adjusted_time=time.time()+delta_timestamp
