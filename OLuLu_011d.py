@@ -553,16 +553,27 @@ def main():
                                 one_min_weight.append(one_min_weight[-1]) #本秒鐘回傳為空，就重複同一分鐘內上一秒的數字。
                             else:
                                 one_min_weight.append(0)#如果真的是空，就當作0吧          
-                        elif len(weight_FLUID)>0 and one_sec_abn<3 : #如果是空陣列就會出現錯誤
-                            if one_sec_weight-int(weight_FLUID[-1]) > 100: #不大可能一秒鐘比上一分鐘的重量多100克
-                                one_sec_abn=one_sec_abn+1
-                                pass
-                        elif len(weight_FLUID)=0 and one_sec_abn<3 : 
-                            if one_sec_weight-int(weight_PREVIOUS[-1]) > 100: #出包的狀況是在每半小時切點後，可能weight_FLUID變成空陣列。所以改用PREVIOUS
-                                one_sec_abn=one_sec_abn+1
-                                pass #one_sec_abn<3用來判斷是來處理突然大量尿液流入。假如連續三秒都是>100，那就是真的
-                        else:
-                            one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
+                        elif len(weight_FLUID)>0:
+                            if one_sec_abn<3 : #如果是空陣列就會出現錯誤
+                                if one_sec_weight-int(weight_FLUID[-1]) > 100: #不大可能一秒鐘比上一分鐘的重量多100克
+                                    one_sec_abn=one_sec_abn+1
+                                    pass
+                                else:
+                                    one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
+                            else:
+                                one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
+                                
+                        elif len(weight_FLUID)==0:
+                            if one_sec_abn<3 : 
+                                if one_sec_weight-int(weight_PREVIOUS[-1]) > 100: #出包的狀況是在每半小時切點後，可能weight_FLUID變成空陣列。所以改用PREVIOUS
+                                    one_sec_abn=one_sec_abn+1
+                                    pass
+                                else:
+                                    one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
+                            else:
+                                one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
+                        #else:
+                         #   one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
 
         #這一分鐘裡面，前面的10秒收集完以後，去除outlier。目前仍採超過一個標準差法。                
                 if len(one_min_weight) > 0 : #要送去跑的話，應該全部是數字，所以這裡判斷不只是空串列，還必須全是數字。如果還是很麻煩，不如不要搞什麼outlier，就是呆呆地每分鐘的00秒接收一次就好。
