@@ -1,24 +1,24 @@
-# On Line urine Lever urility ver 0.11d 本版是特別為了追蹤異常讀數而由b版增添了儲存原讀數的功能
+# On Line urine Lever urility ver 0.11 本版為Github上的0.11版
 # 由於如果使用maplotlib，無法使用Unihiker的A/B鍵功能，改成自己畫圖。
-print("Starting up")
+print("Olulu ver. 0.11 is starting up.")
+#GUI功能
 from unihiker import GUI   # Unihier GUI package
 gui = GUI() 
 startup_img = gui.draw_image(x=0, y=0,w=240, h=300,image='../upload/pict/Copyright-1.png')
 txt=gui.draw_text(text="",x=120,y=10,font_size=12,origin="center",color="#0000FF")
 message_text=gui.draw_text() #
-
-import sys #用來結束程式用
-import time
-from datetime import datetime #為了轉換時間格式方便
+#其他模組
+import sys #結束程式用
+import time #時間模組
+from datetime import datetime #轉換時間格式方便使用
 import csv #讀寫csv檔
-message_text.config(x=1,y=302, font_size=10,text="Starting up 50%..imported csv.")
-import numpy as np #主要數學運算用
+message_text.config(x=1,y=302, font_size=10,text="Starting up.....50% modules imported.")
+import numpy as np #數學運算用
 import serial #序列埠通訊
 import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
 import warnings #為了避開有的沒的警告
-message_text.config(x=1,y=302, font_size=10,text="Starting up 90%..imported warings.")
 from sklearn.linear_model import LinearRegression #回歸用
-message_text.config(x=1,y=302, font_size=10,text="Finding Arduino device.")
+message_text.config(x=1,y=302, font_size=10,text="All modules imported. Finding Arduino device.")
 
 global display_text,action, YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time,delta_timestamp
 # Initialize variables
@@ -480,7 +480,7 @@ def main():
         weight_FLUID[0]=0
         
     weight_RAW.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
-    DISPLAY('','初始值:'+str(weight_FLUID[0])+'; '+str(datetime.fromtimestamp(time_INDEX[0]))[:16])
+    DISPLAY('',time_INDEX[0][:16]+' 初始值:'+str(weight_FLUID[0]))
     #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
     adjusted_time=time.time()+delta_timestamp
     if datetime.fromtimestamp(adjusted_time).minute== 29 or 59:
@@ -633,9 +633,9 @@ if __name__ == '__main__':
     file_name=RESULT+'.csv'
     message_text.config(x=1,y=302, font_size=10,text='file:'+file_name)
     delta_timestamp=DELTA_TIME() #輸入現在時間
-    warnings.filterwarnings('ignore', module="numpy")
-    warnings.filterwarnings('ignore', message='invalid value encountered in scalar divide')
-    warnings.filterwarnings('ignore', message='invalid value encountered in divide')
+    #warnings.filterwarnings('ignore', module="numpy")
+    #warnings.filterwarnings('ignore', message='invalid value encountered in scalar divide')
+    #warnings.filterwarnings('ignore', message='invalid value encountered in divide')
     gui.on_key_click('a',on_click)#按A鍵結束
     gui.on_key_click('b',on_click)
     
