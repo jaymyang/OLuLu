@@ -1,0 +1,19 @@
+import time
+period=[0,1,2,3,4,5,6,7,8,9,10]
+while True:
+    current_second=time.localtime()[5]
+    one_sec_abn=0
+    while time.localtime()[5] in period:
+        
+        
+        if time.localtime()[5] != current_second:
+            current_second=time.localtime()[5]
+            if one_sec_abn<3:
+                print(time.localtime()[5])
+                one_sec_abn=one_sec_abn+1
+            else:
+                break
+        else:
+            time.sleep(0.1)
+    print('time not in period')
+    time.sleep(1)
