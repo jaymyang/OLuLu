@@ -1,5 +1,7 @@
-# On Line urine Lever urility ver 0.11 本版為Github上的0.11版
+# On Line urine Lever urility ver 0.11 本版為0.11d版的簡化版，去掉複雜的異常值除去機制，改成利用數字偏差與取眾數，最後與上一分鐘相比
+#import statistics
 # 由於如果使用maplotlib，無法使用Unihiker的A/B鍵功能，改成自己畫圖。
+
 print("Olulu ver. 0.11 is starting up.")
 #GUI功能
 from unihiker import GUI   # Unihier GUI package
@@ -14,6 +16,7 @@ from datetime import datetime #轉換時間格式方便使用
 import csv #讀寫csv檔
 message_text.config(x=1,y=302, font_size=10,text="Starting up.....50% modules imported.")
 import numpy as np #數學運算用
+import statistics
 import serial #序列埠通訊
 import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
 import warnings #為了避開有的沒的警告
@@ -285,7 +288,7 @@ def DISPLAY(action,message3):
     def DRAW_Y(scale,color_code,weight_plot):
         for y_tick in range(300,0,-20): #座標點
             y_axis_label=gui.draw_text(x=10,y=y_tick, text=round(scale/2.5*(650-2.5*y_tick)), color='black', origin='center',font_size=6)
-        for x_tick in range(240,39,-40): #座標點
+        for x_tick in range(238,37,-40): #座標點
             x_axis_label=gui.draw_text(x=x_tick,y=265, text=str(int(x_tick/4-60)), color='black', origin='center',font_size=8)
 
         for i in range(0,len(weight_plot)-1,1):
@@ -298,7 +301,7 @@ def DISPLAY(action,message3):
         weight_plot=message1
     else:
         weight_plot=message2[-23:]+message1 #合併已存檔的資料（放在前，只取最後23個是因為預留空間給標籤）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料。
-    weight_plot=weight_plot[-55:] #不管如何只取後55個來畫
+    weight_plot=weight_plot[-56:] #不管如何只取後55個來畫
     
     for yn in range(0,301,20): #畫出格線
         x_grid=gui.draw_line(x0=20, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#繪橫線，重量/2.5為座標，故一點=2.5克，上下範圍750克，每格50克，且不排斥負數
@@ -322,7 +325,7 @@ def DISPLAY(action,message3):
     if action=='clean':
         gui.clear()
     time.sleep(0.1)
- ##############################################################################################  
+ ###############################################################################
 # Function to get weight from Arduino
 def initial_value(): #照講這個應該一樣用get_weight()就好
     while True:
@@ -334,7 +337,7 @@ def initial_value(): #照講這個應該一樣用get_weight()就好
             initial_weight_temp=0
         return initial_weight_temp
         break
-#----------------------------------------        
+#-------------------------------------------------------------------------------     
 def get_weight(): #秤重
     data_temp=''
     weight_temp=''
@@ -351,16 +354,15 @@ def get_weight(): #秤重
                         pass
                 break
         else:
-            time.sleep(0.99) #改成0.99以後好像從序列埠抓到的數字比較穩定
+            time.sleep(0.1) #
             pass
             
-
-    if weight_temp=='':#加上一個簡單的異常數字判斷
+    if weight_temp=='': #抓到了個空
         weight_temp=-999.9 #因為序列埠只回傳整數，所以故意設定為小數
-    elif weight_temp=='-':
+    elif weight_temp=='-': #只抓到負號沒有數字
         weight_temp=-999.9
     else:
-        weight_temp=int(weight_temp)
+        weight_temp=int(weight_temp) #數字太離譜
         if weight_temp <-1000 or weight_temp >3000:
             weight_temp=-999.9
         else:
@@ -496,89 +498,69 @@ def main():
     previous_prediction_15=[0,0]
     current_second = None
     weight_PREVIOUS=[] #忘記先前為什麼改設空
+    one_min_abn=0
 
     #以下開始
     while True:                    
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複
             if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。這也是為什麼在執行到這裡之前按下A/B都不會有反應。
                 break
-
+            current_second=time.localtime()[5]
             if time.localtime()[4] != current_minute: #current_time代表以下程式區塊所執行的時間。time.localtime[4]不等於current_time時，表示是新的一分鐘
                 current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
-                #weight_flag=0
                 one_min_weight=[]
+                weight_flag=0
 
-                while time.localtime()[5] in period_second:
-                    current_second=time.localtime()[5]
-                    one_sec_abn=0
-                    
-                    if time.localtime()[4] != current_second:   #每秒只會抓一次                     
+                while time.localtime()[5] in period_second:                                                          
+                    if time.localtime()[5] != current_second:   #每秒只會抓一次
+                        current_second=time.localtime()[5]  
                         one_sec_weight=get_weight() #抓重量，回傳的數字放在one_sec_weight
                         if one_sec_weight == -999.9 : #-999.9為異常值。重複同一分鐘上一秒的數字。
-                            if len(one_min_weight)>0:#one_min_weight要確定不是空串列
+                            if len(one_min_weight)!=0:#one_min_weight必須不是空串列
                                 one_min_weight.append(one_min_weight[-1]) #本秒鐘回傳為空，就重複同一分鐘內上一秒的數字。
-                            else:
-                                if len(weight_FLUID)>0:
+                            else:#如果one_min_weight是空串列
+                                if len(weight_FLUID)!=0:#那就用weight_FLUID的最後一個，也就是上一分鐘的最後一個。但必須要注意第一個數字有可能是0
                                     one_min_weight.append(weight_FLUID[-1])
-                                else:
-                                    one_min_weight.append(0)#如果one_min_weight是空，就當作0吧          
+                                else:#weight_FLUID是空的話，直接接0
+                                    one_min_weight.append(0)#
                         else: #非異常值
-                            if one_sec_abn==3 :#表示前面已有三次抓到異常值了
-                                one_min_weight.append(one_sec_weight)  #不用管那麼多，直接放進本分鐘串列
-                                one_sec_abn==0 #重設
-                            elif one_sec_abn<3:
-                                if len(weight_FLUID)>0: #如果是空陣列就會出現錯誤
-                                    if one_sec_weight-float(weight_FLUID[-1]) > 100: #如本秒鐘比上一分鐘的重量多100克，可能是異常
-                                        one_min_weight.append(one_min_weight[-1]) #先用上個分鐘的數
-                                        one_sec_abn=one_sec_abn+1 #計次
-                                        pass
-                                    else:
-                                        one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
-                                        one_sec_abn==0 #重設
-                                        pass #完成。
-                                elif len(weight_FLUID)==0:#出包的狀況是在每半小時切點後，可能weight_FLUID變成空陣列。所以改用PREVIOUS
-                                    if len(weight_PREVIOUS) > 0:
-                                        if one_sec_weight-float(weight_PREVIOUS[-1]) > 100: 
-                                            one_min_weight.append(weight_PREVIOUS[-1]) #用上個分鐘的數
-                                            one_sec_abn=one_sec_abn+1
-                                            pass
-                                        else:
-                                            one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
-                                            one_sec_abn==0 #重設
-                                    else:
-                                        one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
-                                        one_sec_abn==0 #重設
-                            else:
-                                one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
-                                one_sec_abn==0 #重設
-
-
-        #收集10秒的數字以後，去除outlier。目前採超過0.5個標準差法。                
-                if len(one_min_weight) > 0 : #必須判斷不只是空串列，還必須全是數字。如果還是很麻煩，不如不要搞什麼outlier，就是呆呆地每分鐘的00秒接收一次就好。
-                    #DISPLAY('',one_min_weight) #去畫圖
-                    weight_raw_string=",".join(str(element) for element in one_min_weight)
-                    one_weight_temp=discard_outlier(one_min_weight) #呼叫。除掉outlier，傳回資料放在one_weight_temp
-                    adjusted_time=time.time()+delta_timestamp
-                    if len(one_weight_temp)==0:
-                        if len(weight_FLUID)>0:
-                            weight_FLUID.append(weight_FLUID[-1])
-                        else:
-                            if len(weight_PREVIOUS)>1:
-                                weight_FLUID.append(weight_PREVIOUS[-1])
+                            one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
+                    
+#收集10秒的數字以後，判斷異常。
+                if time.localtime()[5] ==11 and weight_flag==0:
+                    weight_flag==1
+                    if np.max(one_min_weight)-np.min(one_min_weight) <= 5:
+                        weight_FLUID.append(round(np.mean(one_min_weight)))
                     else:
-                        weight_FLUID.append(np.mean(one_weight_temp))   #將已去除outlier的數字計算平均，並加入重量紀錄主串列weight_Fluid
+                        weight_FLUID.append(statistics.median(one_min_weight))
+                    if one_min_abn <3:
+                        if len(weight_FLUID) > 2: 
+                            if weight_FLUID[-1]-weight_FLUID[-2]>50: #兩次相差超過50克
+                                weight_FLUID[-1]=weight_FLUID[-2] #直接在這邊處理，把最新加進去的那個替換成舊值
+                                one_min_abn=one_min_abn=+1
+                            else:
+                                pass#不然就算了
+                        else:
+                            if len(weight_PREVIOUS) > 0:
+                                if weight_FLUID[-1]-weight_PREVIOUS[-1]>50: #兩次相差超過50克
+                                    weight_FLUID[-1]=weight_PREVIOUS[-1] #直接在這邊處理，把最新加進去的那個替換成舊值
+                                    one_min_abn=one_min_abn=+1
+                                else:
+                                    pass#不然就算了
+                            else:
+                                pass#不然就算了
+                            
+                    else:
+                        one_min_abn=0
+                        pass
+
+                    weight_raw_string=",".join(str(element) for element in one_min_weight)
+                    adjusted_time=time.time()+delta_timestamp
                     weight_RAW.append(weight_raw_string)
                     time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
                     DISPLAY('',one_min_weight) #去畫圖
                     one_min_weight=[]
-                else:
-                    weight_raw_string=",".join(str(element) for element in one_min_weight)
-                    adjusted_time=time.time()+delta_timestamp
-                    weight_FLUID.append(weight_FLUID[-1]) #等於上一分的數字 
-                    weight_RAW.append(weight_raw_string)
-                    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
-                    DISPLAY('',one_min_weight) #去畫圖
-                    pass 
+
 
         #每5分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
                 if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
