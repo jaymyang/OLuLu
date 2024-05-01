@@ -1,0 +1,78 @@
+#include "HX711.h"
+int Weight = 0;
+int Sec_Count = 0;
+int Status = 0,Status_Pre = 1;
+int Flag_Up = 0,Flag_Down = 0;
+int from_python = 0;
+
+void setup()
+{
+	Init_Hx711();				//初始化HX711模組連接的IO設置
+
+	Serial.begin(9600);
+	//Serial.print("Welcome to use!\n");
+        Get_Maopi();		//獲取毛皮
+	delay(3000);
+	Get_Maopi();		//獲取毛皮
+  //      Serial.print("Start!\n");
+}
+
+void loop()
+{
+	Weight = Get_Weight();	//計算放在感測器上的重物重量
+        
+ //       if(Weight <= 5)
+ //       {
+ //         Status = 0;       
+ //       }
+ //       else
+ //       {
+ //         Status = 1;		
+ //       }
+ //         
+ //       if(Status != Status_Pre)
+ //       {
+ //         if(Status == 1 && Status_Pre == 0)		
+ //         {
+ //           Flag_Up = 1;
+ //         }
+ //         if(Status == 0 && Status_Pre == 1)		
+ //         {
+//          Flag_Down = 1;
+//          }
+//          Status_Pre = Status;         
+//        }
+//        
+//        if(Flag_Up == 1)				
+//        {
+//          Flag_Up = 0;
+//          Sec_Count = 0;
+//        }
+//        
+//        if(Status == 1 || Flag_Down == 1)		
+//        {
+//          Flag_Down = 0;
+          Serial.print("A");
+          Serial.println(Weight);	//串口顯示重量
+          if (Serial.available()) { //傳來數字
+            from_python = Serial.readString().toInt(); //轉成整數
+            if (from_python==Weight){
+              Serial.println('T'); 
+            }
+            else{
+              Serial.println('F');
+            }
+          }
+      	  //Serial.print("g ");	//顯示單位
+          //if(Status == 1)
+          //  Serial.print(++Sec_Count);
+          //else
+          //  Serial.print(Sec_Count);
+          //Serial.print("\n");
+  //      }
+        
+        
+        
+	delay(990);				//延時0.99s
+
+}
