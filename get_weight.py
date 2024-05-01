@@ -40,39 +40,42 @@ COM_PORT = 'COM4'    # 指定通訊埠名稱
 BAUD_RATES = 9600    # 設定傳輸速率
 arduinoSerial = serial.Serial(COM_PORT, BAUD_RATES)   # 初始化序列通訊埠
 
-
-
-
-
-def get_weight(): #取Arduino
+def get_data():
     data_temp=''
     weight_temp=''
-    arduinoSerial.reset_input_buffer()
+    arduinoSerial.reset_input_buffer()    
     while True:
         while arduinoSerial.in_waiting:          # 若收到序列資料…
+            print('getting data')
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
             #print(data_in)
-            if b'\n' not in data_in:
+            if b'\n' in data_in and str(data_in.decode('utf-8')[0]) =='A':
+                data_temp=str(data_in.decode('utf-8').rstrip())#解碼；用rstrip()去掉末尾
+                #print('data_temp',data_temp)
+                weight_temp=int(str(data_temp)[1:])
+                break
+                
+            else:
                 time.sleep(0.1) #
                 pass
-            else:
+        if type(weight_temp)==int:
+            break
+        else:
+            pass
+    arduinoSerial.reset_input_buffer()  
+    return weight_temp
+    
 
-                if str(data_in.decode('utf-8')[0]) !='A':
-                    pass
-                else:
-                    data_temp=str(data_in.decode('utf-8').rstrip())#解碼；用rstrip()去掉末尾
-                    #print('data_temp',data_temp)
-                    weight_temp=int(str(data_temp)[1:])
-                    arduinoSerial.reset_input_buffer()
-                    arduinoSerial.write(str(weight_temp).encode(encoding='utf-8'))
-                    time.sleep(0.01)
-                    #while arduinoSerial.in_waiting:
-                    T_F = arduinoSerial.readline()
-                    print(T_F.decode('utf-8').rstrip())
-                    if T_F.decode('utf-8').rstrip() =='T':
-                        break
-                    else:
-                        pass
+def get_weight(): #取Arduino
+    weight_data=get_data()
+    arduinoSerial.write(str(weight_data).encode(encoding='utf-8'))
+    while arduinoSerial.in_waiting:
+        T_F = arduinoSerial.readline()
+        print(T_F.decode('utf-8').rstrip())
+        if T_F.decode('utf-8').rstrip() =='T':
+            break
+        else:
+            weight_data=999.9
 
       
     #if weight_temp=='': #抓到了個空
@@ -85,8 +88,8 @@ def get_weight(): #取Arduino
     #        weight_temp=-999.9
     #    else:
     #        pass
-    print('weight_temp',weight_temp)
-    return weight_temp
+    print('weight_data',weight_data)
+    return weight_data
 
 
 
