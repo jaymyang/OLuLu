@@ -36,7 +36,7 @@ time_stamp=time.time()
 delta_timestamp=0
 
 file_name = ''
-COM_PORT = 'COM4'    # 指定通訊埠名稱
+COM_PORT = 'COM5'    # 指定通訊埠名稱
 BAUD_RATES = 9600    # 設定傳輸速率
 arduinoSerial = serial.Serial(COM_PORT, BAUD_RATES)   # 初始化序列通訊埠
 
@@ -49,10 +49,13 @@ def get_data():
             print('getting data')
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
             #print(data_in)
-            if b'\n' in data_in and str(data_in.decode('utf-8')[0]) =='A':
-                data_temp=str(data_in.decode('utf-8').rstrip())#解碼；用rstrip()去掉末尾
-                #print('data_temp',data_temp)
-                weight_temp=int(str(data_temp)[1:])
+            if b'\n' in data_in:
+                if str(data_in.decode('utf-8')[0]) !='A':
+                    pass
+                else:
+                    data_temp=str(data_in.decode('utf-8').rstrip())#解碼；用rstrip()去掉末尾
+                    #print('data_temp',data_temp)
+                    weight_temp=int(str(data_temp)[1:])
                 break
                 
             else:
@@ -62,34 +65,40 @@ def get_data():
             break
         else:
             pass
-    arduinoSerial.reset_input_buffer()  
+    arduinoSerial.reset_input_buffer()
+    
     return weight_temp
     
 
 def get_weight(): #取Arduino
-    weight_data=get_data()
-    arduinoSerial.write(str(weight_data).encode(encoding='utf-8'))
-    while arduinoSerial.in_waiting:
-        T_F = arduinoSerial.readline()
-        print(T_F.decode('utf-8').rstrip())
-        if T_F.decode('utf-8').rstrip() =='T':
+    count=0
+    return_data=[]
+    while True:
+        if count >10:
             break
+        weight_data=get_data()
+        time.sleep(0.01)
+        arduinoSerial.write(str(weight_data).encode(encoding='utf-8'))
+        time.sleep(0.01)
+        T_F = arduinoSerial.readline().decode('utf-8').rstrip()
+        print('T_F',T_F)
+        if T_F =='T':
+            pass
         else:
             weight_data=999.9
-
-      
-    #if weight_temp=='': #抓到了個空
-    #    weight_temp=-999.9 #因為序列埠只回傳整數，所以故意設定為小數
-    #elif weight_temp=='-': #只抓到負號沒有數字
-    #    weight_temp=-999.9
-    #else:
-    #    weight_temp=int(weight_temp) #數字太離譜
-    #    if weight_temp <-1000 or weight_temp >3000:
-    #        weight_temp=-999.9
-    #    else:
-    #        pass
+        if weight_data=='': #抓到了個空
+            weight_data=-999.9 #因為序列埠只回傳整數，所以故意設定為小數
+        elif weight_data=='-': #只抓到負號沒有數字
+            weight_data=-999.9
+        else:
+            if weight_data <-1000 or weight_data >3000:
+                weight_data=-999.9
+            else:
+                pass
+        return_data.append(weight_data)
+        count=count+1
     print('weight_data',weight_data)
-    return weight_data
+    return return_data
 
 
 
@@ -111,20 +120,16 @@ def main():
                 one_min_weight=[]
                 weight_flag=0
 
-                while time.localtime()[5] in period_second:                                                          
+                while time.localtime()[5] ==00:                                                          
                     if time.localtime()[5] != current_second:   #每秒只會抓一次
                         current_second=time.localtime()[5]  
-                        one_sec_weight=get_weight() #抓重量，回傳的數字放在one_sec_weight
-                        if one_sec_weight == -999.9 : #-999.9為異常值。重複同一分鐘上一秒的數字。
-                            if len(one_min_weight)!=0:#one_min_weight必須不是空串列
-                                one_min_weight.append(one_min_weight[-1]) #本秒鐘回傳為空，就重複同一分鐘內上一秒的數字。
-                            else:#如果one_min_weight是空串列
-                                if len(weight_FLUID)!=0:#那就用weight_FLUID的最後一個，也就是上一分鐘的最後一個。但必須要注意第一個數字有可能是0
-                                    one_min_weight.append(weight_FLUID[-1])
-                                else:#weight_FLUID是空的話，直接接0
-                                    one_min_weight.append(0)#
-                        else: #非異常值
-                            one_min_weight.append(one_sec_weight)  #如非以上特例，則將傳回的數字加入本分鐘串列
+                        one_min_weight=get_weight() #抓重量，回傳的數字放在one_sec_weight
+
+                        for i in [1,len(one_min_weight)-1,1]:
+                            if one_min_weight[i]==999.9:
+                                del one_min_weight[i]
+
+
                     
 #收集10秒的數字以後，判斷異常。
                 print('one_min_weight',one_min_weight)
