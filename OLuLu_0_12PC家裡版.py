@@ -1,5 +1,6 @@
 # On Line urine Lever urility ver 0.12
 #本版為0.11d版的簡化版，去掉複雜的異常值除去機制，改成利用數字偏差與取眾數，最後與上一分鐘相比
+#改用Unihiker繪圖，而非matplotlib
 
 print("Olulu PC　ver. 0.12 is starting up.")
 
@@ -17,7 +18,12 @@ from sklearn.linear_model import LinearRegression #回歸用
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import signal
-
+#GUI功能
+from unihiker import GUI   # Unihier GUI package
+gui = GUI() 
+startup_img = gui.draw_image(x=0, y=0,w=240, h=300,image='../Copyright-1.png')
+txt=gui.draw_text(text="",x=120,y=10,font_size=12,origin="center",color="#0000FF")
+message_text=gui.draw_text() #
 
 # Initialize variables
 fprop = fm.FontProperties(fname='NotoSansTC-VariableFont_wght.otf')
@@ -65,6 +71,55 @@ def plot_scatter(Title):
     plt.xlim([0, 60])
     plt.show(block=False)
     plt.pause(0.1)
+##########################################################################################################
+#以下是監測重量時的顯示函式
+def DISPLAY(action,message3):
+    gui.clear() #每次都先擦掉
+    global weight_FLUID,weight_PREVIOUS, display_text
+    message2=weight_PREVIOUS #用message2代替weight_PREVIOUS，免得破壞主資料陣列
+    message1=weight_FLUID    #用message1代替weight_FLUID，免得破壞主資料陣列
+#-------------------------------------------------------------
+    def DRAW_Y(scale,color_code,weight_plot):
+        for y_tick in range(300,0,-20): #座標點
+            y_axis_label=gui.draw_text(x=10,y=y_tick, text=round(scale/2.5*(650-2.5*y_tick)), color='black', origin='center',font_size=6)
+        for x_tick in range(238,37,-40): #座標點
+            x_axis_label=gui.draw_text(x=x_tick,y=265, text=str(int(x_tick/4-60)), color='black', origin='center',font_size=8)
+
+        for i in range(0,len(weight_plot)-1,1):
+            if weight_plot[i] < 0:#負值用黑線繪圖；照講寬度應該是要留4
+                scatter=gui.draw_line(x0=238-4*x_cor[i], y0=260,x1=238-4*x_cor[i], y1=round(260-weight_plot[i]/scale)-1, width=3, color="black") 
+            else:#正值依照scale選顏色 
+                scatter=gui.draw_line(x0=238-4*x_cor[i], y0=260,x1=238-4*x_cor[i], y1=round(260-weight_plot[i]/scale)-1, width=3, color=color_code)
+#-------------------------------------------------------------  
+    if message2==[]: #第一輪沒有weight_PREVIOUS，所以只需要顯示weight_FLUID
+        weight_plot=message1
+    else:
+        weight_plot=message2[-23:]+message1 #合併已存檔的資料（放在前，只取最後23個是因為預留空間給標籤）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料。
+    weight_plot=weight_plot[-56:] #不管如何只取後55個來畫
+    
+    for yn in range(0,301,20): #畫出格線
+        x_grid=gui.draw_line(x0=20, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#繪橫線，重量/2.5為座標，故一點=2.5克，上下範圍750克，每格50克，且不排斥負數
+    for xn in range(20,240,20):
+        y_grid=gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #繪縱線，共12線11格，每格20點，5分鐘    
+    x_axis=gui.draw_line(x0=20, y0=260, x1=240, y1=260, width=1, color='black')#繪0參考線    
+    x_cor = np.arange(0,len(weight_plot)-1,1) 
+    x_cor=x_cor[::-1] #逆轉順序以供繪圖
+    if np.max(weight_plot) < 350: #改變Y的scale
+        DRAW_Y(1.25,'orange',weight_plot)
+    else:
+        DRAW_Y(2.5,'blue',weight_plot)
+        
+
+    if message3=='':
+        message3=display_text #display_text是用來再現先前所顯示的內容
+    else:
+        pass
+    message_text=gui.draw_text(x=1,y=302, font_size=10,text=message3)
+    display_text=message3
+    if action=='clean':
+        gui.clear()
+    time.sleep(0.1)
+ ###############################################################################
 
 # Function to get weight from Arduino
 def initial_value(): #照講這個應該一樣用get_weight()就好
@@ -343,7 +398,7 @@ def main():
                 weight_RAW.append(weight_raw_string)
                 time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
                 print('weight_FLUID',weight_FLUID)
-                plot_scatter('Plotting one_min_weight') #去畫圖
+                DISPLAY('',one_min_weight) #去畫圖
                 one_min_weight=[]
 
 
