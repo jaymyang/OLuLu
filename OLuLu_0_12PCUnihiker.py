@@ -1,4 +1,4 @@
-# On Line urine Lever urility ver 0.12
+# On Line urine Lever urility ver 0.121
 #本版為0.11d版的簡化版，去掉複雜的異常值除去機制，改成利用數字偏差與取眾數，最後與上一分鐘相比
 #改用Unihiker繪圖，而非matplotlib
 
