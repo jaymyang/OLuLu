@@ -1,6 +1,6 @@
 # On Line urine Lever urility ver 0.12
 #本版為0.11d版的簡化版，去掉複雜的異常值除去機制，改成利用數字偏差與取眾數，最後與上一分鐘相比
-#在Python 3.4版使用。因Unihiker不支援Python 3.4版
+#在Python 3.4版使用，必須配合Pyserial 2.7. (pip install pyserial==2.7)。會做出這個分之，是因為Unihiker不支援Python 3.4版
 
 print("Olulu PC　ver. 0.12 is starting up.")
 
@@ -90,9 +90,9 @@ def initial_value(): #照講這個應該一樣用get_weight()就好
 def get_data():
     data_temp=''
     weight_temp=''
-    arduinoSerial.reset_input_buffer()    
+    arduinoSerial.flushInput()    
     while True:
-        while arduinoSerial.in_waiting:          # 若收到序列資料…
+        while arduinoSerial.inWaiting():          # 若收到序列資料…
 
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
             if b'\n' in data_in:
@@ -110,7 +110,7 @@ def get_data():
             break
         else:
             pass
-    arduinoSerial.reset_input_buffer()
+    arduinoSerial.flushInput()
     #print('weight_temp',weight_temp)    
     return weight_temp
     
@@ -396,7 +396,7 @@ def main():
 
 if __name__ == '__main__':
     COM_PORT = 'COM5'
-    ports = list(serial.tools.list_ports.comports())
+    ports = list(serial.device())
     for port in ports:
         if port.manufacturer.startswith("Arduino"):
             COM_PORT = port.name
