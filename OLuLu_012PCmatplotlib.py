@@ -1,5 +1,6 @@
 # On Line urine Lever urility ver 0.12
 #本版為0.11d版的簡化版，去掉複雜的異常值除去機制，改成利用數字偏差與取眾數，最後與上一分鐘相比
+#採用matplotlib繪圖
 
 print("Olulu PC　ver. 0.12 is starting up.")
 
@@ -20,7 +21,7 @@ import signal
 
 
 # Initialize variables
-fprop = fm.FontProperties(fname='NotoSansTC-VariableFont_wght.otf')
+#fprop = fm.FontProperties(fname='NotoSansTC-VariableFont_wght.otf')
 global display_text,action, YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time,delta_timestamp
 display_text=''
 action='nil'
@@ -119,6 +120,7 @@ def get_weight():
             time.sleep(0.01)
             T_F = arduinoSerial.readline().decode('utf-8').rstrip()
             if T_F =='T':
+                
                 pass
             else:
                 weight_data=999.9
@@ -243,7 +245,7 @@ def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW
     adjusted_time=time.time()+delta_timestamp
     time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))) #改成用調整時間
-    initial_weight_temp=get_weight()
+    initial_weight_temp=initial_value()
     weight_FLUID.append(round(np.mean(initial_weight_temp)))
     if weight_FLUID[0]=='NaN':
         weight_FLUID[0]=0
@@ -266,52 +268,66 @@ def main():
     current_second = None
     weight_PREVIOUS=[] #忘記先前為什麼改設空
     one_min_abn=0
+    
 
     #以下開始
-    while True:                    
+    while True:
+        
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複
-            if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。這也是為什麼在執行到這裡之前按下A/B都不會有反應。
-                break
-            current_second=time.localtime()[5]
+            #if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。這也是為什麼在執行到這裡之前按下A/B都不會有反應。
+            #    break
+            #current_second=time.localtime()[5]
             if time.localtime()[4] != current_minute: #current_time代表以下程式區塊所執行的時間。time.localtime[4]不等於current_time時，表示是新的一分鐘
                 current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
                 one_min_weight=[]
                 #weight_flag=0
+                #print('1本分鐘開始時one_min_abn',one_min_abn)   
 
-                while time.localtime()[5] ==00:                                                          
+                while time.localtime()[5] == 00:
+                    print('本分鐘01秒時one_min_abn',one_min_abn)   
+
                     #if time.localtime()[5] != current_second:   #每秒只會抓一次
                     #    current_second=time.localtime()[5]  
                     one_min_weight=get_weight() #抓重量，回傳的數字放在one_min_weight
-                    for i in [1,len(one_min_weight)-1,1]:
+                    for i in [0,len(one_min_weight)-1,1]:
                         if one_min_weight[i]==999.9:
                             del one_min_weight[i]
                     
                 print('one_min_weight:',one_min_weight)
+                #print('one_min_abn',one_min_abn)
                 if len(one_min_weight)>0:
                    # weight_flag==1
                     if np.max(one_min_weight)-np.min(one_min_weight) <= 5:
                         weight_FLUID.append(round(np.mean(one_min_weight)))
+                        print('original weight_FLUID',weight_FLUID)
                     else:
                         weight_FLUID.append(round(statistics.median(one_min_weight)))
-                        pass
+                        print('original weight_FLUID',weight_FLUID)
+
+
                     if one_min_abn <3:
                         if len(weight_FLUID) > 2: 
                             if weight_FLUID[-1]-weight_FLUID[-2]>50: #兩次一分鐘重量相差超過50克
+                                print('original one_min_abn<3,lenweight_fluid>2',one_min_abn)  
                                 weight_FLUID[-1]=weight_FLUID[-2] #直接在這邊處理，把最新加進去的那個替換成舊值
-                                one_min_abn=one_min_abn=+1
+                                one_min_abn = one_min_abn + 1
+                                print('one_min_abn<3,lenweight_fluid>2',one_min_abn)                                
                             else:
-                                pass#不然就算了
+                                pass
+
                         else:
                             if len(weight_PREVIOUS) > 0:
                                 if weight_FLUID[-1]-weight_PREVIOUS[-1]>50: #兩次相差超過50克
+                                    print('original one_min_abn len_weight_PREVIOUS>0',one_min_abn) 
                                     weight_FLUID[-1]=weight_PREVIOUS[-1] #直接在這邊處理，把最新加進去的那個替換成舊值
-                                    one_min_abn=one_min_abn=+1
+                                    one_min_abn = one_min_abn + 1
+                                    print('one_min_abn,len_weight_PREVIOUS>0',one_min_abn)                                         
                                 else:
                                     pass#不然就算了
                             else:
                                 pass#不然就算了
-                            
-                    else:
+                        
+                    elif one_min_abn == 3: #
                         one_min_abn=0
                         pass
                 elif len(one_min_weight)==0: #本次經處理過啥都沒有
@@ -327,7 +343,7 @@ def main():
                 adjusted_time=time.time()+delta_timestamp
                 weight_RAW.append(weight_raw_string)
                 time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
-                print(weight_FLUID)
+                print('weight_FLUID',weight_FLUID)
                 plot_scatter('Plotting one_min_weight') #去畫圖
                 one_min_weight=[]
 
