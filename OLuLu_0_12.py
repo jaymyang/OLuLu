@@ -654,7 +654,7 @@ def main():
 ############################################################################################################################################
 
 if __name__ == '__main__':
-     ports = list( serial.tools.list_ports.comports() )
+    ports = list( serial.tools.list_ports.comports() )
     for port in ports:
         if port.manufacturer.startswith( "Arduino" ):
             COM_PORT = '/dev/'+port.name
