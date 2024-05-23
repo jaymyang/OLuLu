@@ -209,7 +209,7 @@ def saving_data(saving_time, saving_weight, cutting_index,saving_raw): #位置�
         saving_raw_upper = [r for t, r in zip(saving_time, saving_raw) if int(t[-2:]) < 30] #把兩個串列裡相同位置的元素配在一起
         saving_time_lower = [t for t in saving_time if int(t[-2:]) >= 30]#不然就是30-59分的資料，歸在下半
         saving_weight_lower = [w for t, w in zip(saving_time, saving_weight) if int(t[-2:]) >= 30]
-        saving_raw_lower = [r for t, r in zip(saving_time, saving_raw) if int(t[-2:]) < 30] #把兩個串列裡相同位置的元素配在一起
+        saving_raw_lower = [r for t, r in zip(saving_time, saving_raw) if int(t[-2:]) >= 30] #把兩個串列裡相同位置的元素配在一起
 
         if cutting_index == 59:#59分的時候，保留30-59的資料，儲存00-29的資料
             file_time = saving_time_upper
