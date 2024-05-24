@@ -136,9 +136,9 @@ def initial_value(): #照講這個應該一樣用get_weight()就好
 def get_data():
     data_temp=''
     weight_temp=''
-    arduinoSerial.reset_input_buffer()    
+    arduinoSerial.flushInput()    
     while True:
-        while arduinoSerial.in_waiting:          # 若收到序列資料…
+        while arduinoSerial.inWaiting():          # 若收到序列資料…
 
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
             if b'\n' in data_in:
@@ -156,8 +156,7 @@ def get_data():
             break
         else:
             pass
-    arduinoSerial.reset_input_buffer()
-    print('weight_temp',weight_temp)    
+    arduinoSerial.flushInput() #再flush看似多餘，但是因為待會要跟Arduino溝通TF值，所以先清掉
     return weight_temp
     
 
@@ -173,22 +172,21 @@ def get_weight():
             arduinoSerial.write(str(weight_data).encode(encoding='utf-8'))
             time.sleep(0.01)
             T_F = arduinoSerial.readline().decode('utf-8').rstrip()
-            if T_F =='T':
-                
+            if T_F =='T':                
                 pass
             else:
                 weight_data=999.9
             if weight_data=='': #抓到了個空
-                weight_data=-999.9 #因為序列埠只回傳整數，所以故意設定為小數
+                weight_data=999.9 #因為序列埠只回傳整數，所以故意設定為小數
             elif weight_data=='-': #只抓到負號沒有數字
-                weight_data=-999.9
+                weight_data=999.9
             elif weight_data <-1000 or weight_data >3000:
-                weight_data=-999.9
+                weight_data=999.9
             else:
                 pass
         return_data.append(weight_data)
         count=count+1
-    print('return_data',return_data)
+    #print('return_data',return_data)
     return return_data
 
 #----------------------------------------------------------
