@@ -295,37 +295,32 @@ def main():
                     
                 print('one_min_weight:',one_min_weight)
                 #print('one_min_abn',one_min_abn)
-                if len(one_min_weight)>0:
+                                if len(one_min_weight)>0:
                    # weight_flag==1
-                    if np.max(one_min_weight)-np.min(one_min_weight) <= 5:
+                    if np.max(one_min_weight)-np.min(one_min_weight) <= 5: #10秒之中取得的數字變異不大，取平均
                         weight_FLUID.append(round(np.mean(one_min_weight)))
-                        print('original weight_FLUID',weight_FLUID)
+                        #
                     else:
-                        weight_FLUID.append(round(statistics.median(one_min_weight)))
-                        print('original weight_FLUID',weight_FLUID)
-
-
-                    if one_min_abn <3:
-                        if len(weight_FLUID) > 2: 
-                            if weight_FLUID[-1]-weight_FLUID[-2]>50: #兩次一分鐘重量相差超過50克
-                                print('original one_min_abn<3,lenweight_fluid>2',one_min_abn)  
+                        weight_FLUID.append(round(statistics.median(one_min_weight)))#10秒之中取得的數字變異較大，取中位數
+                        #
+#以上先取數值，接著處理異常值
+                    if one_min_abn <3: #就是沒什麼異常值的時候
+                        if len(weight_FLUID) > 2: #但這樣的作法，有可能在剛開始使用時，原先為0然後掛上尿袋，卻因為大於50克被hold住，到了連續三次以後才被寫入，但外表看來就是從零跳到一兩百
+                            if weight_FLUID[-1]-weight_FLUID[-2]>50: #一分鐘重量相差超過50克
                                 weight_FLUID[-1]=weight_FLUID[-2] #直接在這邊處理，把最新加進去的那個替換成舊值
                                 one_min_abn = one_min_abn + 1
-                                print('one_min_abn<3,lenweight_fluid>2',one_min_abn)                                
-                            else:
+                            else:#沒有過大差距
                                 pass
 
-                        else:
+                        else: #每30分鐘區段一開始的時候
                             if len(weight_PREVIOUS) > 0:
                                 if weight_FLUID[-1]-weight_PREVIOUS[-1]>50: #兩次相差超過50克
-                                    print('original one_min_abn len_weight_PREVIOUS>0',one_min_abn) 
                                     weight_FLUID[-1]=weight_PREVIOUS[-1] #直接在這邊處理，把最新加進去的那個替換成舊值
                                     one_min_abn = one_min_abn + 1
-                                    print('one_min_abn,len_weight_PREVIOUS>0',one_min_abn)                                         
-                                else:
-                                    pass#不然就算了
-                            else:
-                                pass#不然就算了
+                                else:#沒有過大差距
+                                    pass 
+                            else:#沒有舊值
+                                pass #這種情形是沒有舊值且現在也只有一兩個，就是最初剛開始。pass就是不替換，直接把數字放進去
                         
                     elif one_min_abn == 3: #
                         one_min_abn=0
@@ -336,8 +331,9 @@ def main():
                     elif len(weight_FLUID)==0 and len(weight_PREVIOUS)>0:
                         weight_FLUID.append(weight_PREVIOUS[-1]) #直接帶入上一個分鐘的
                     else:
-                        weight_FLUID.append(0)
-                
+                        weight_FLUID.append(0) #目前是認為如果都沒抓到，先用0填補。這可能會造成後續計算時使用去除outlier時的問題，但如果不是用去除outlier法而是使用閾值判斷+步進累加法，可能無啥影響。
+ 
+              
 
                 weight_raw_string=",".join(str(element) for element in one_min_weight)
                 adjusted_time=time.time()+delta_timestamp
