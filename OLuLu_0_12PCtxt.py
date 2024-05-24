@@ -338,14 +338,15 @@ def main():
                         weight_FLUID.append(weight_PREVIOUS[-1]) #直接帶入上一個分鐘的
                     else:
                         weight_FLUID.append(0) #目前是認為如果都沒抓到，先用0填補。這可能會造成後續計算時使用去除outlier時的問題，但如果不是用去除outlier法而是使用閾值判斷+步進累加法，可能無啥影響。
- 
+                
                 weight_raw_string=",".join(str(element) for element in one_min_weight)
                 adjusted_time=time.time()+delta_timestamp
                 weight_RAW.append(weight_raw_string)
                 time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
-                DISPLAY('',one_min_weight) #去畫圖
-                #plot_scatter(weight_FLUID[-1]) #去畫圖
+                print('weight_RAW',weight_raw_string)
+                plot_scatter(weight_FLUID[-1]) #去畫圖
                 one_min_weight=[]
+
 
 
         #每5分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
