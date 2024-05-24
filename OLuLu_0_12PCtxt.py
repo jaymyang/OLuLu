@@ -12,7 +12,7 @@ import csv #讀寫csv檔
 import numpy as np #數學運算用
 import statistics
 import serial #序列埠通訊
-import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
+#import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
 import warnings #為了避開有的沒的警告
 from sklearn.linear_model import LinearRegression #回歸用
 import matplotlib.pyplot as plt
@@ -52,6 +52,22 @@ Mo=6
 D=15
 Hr=12
 Min=30
+
+##########################################################################################################
+def INPUT(item,range_L,range_U):
+    input_data=input('請輸入現在'+item+'：')
+    while True:
+        if input_data.isdigit()==False:
+            input_data=int(input('請輸入現在'+item+'：'))
+        else:
+            input_data=int(input_data)
+            break
+    while True:
+        if int(input_data) not in range(range_L,range_U):
+            input_data=int(input('請輸入現在'+item+'：'))
+        else:
+            break
+    return input_data
 
 ##########################################################################################################
 
