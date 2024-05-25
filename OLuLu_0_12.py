@@ -556,7 +556,7 @@ def main():
                 #weight_flag=0
                 #print('1本分鐘開始時one_min_abn',one_min_abn)   
 
-                while time.localtime()[5] == 00:
+                while time.localtime()[5] == 1:
                     #print('本分鐘01秒時one_min_abn',one_min_abn)   
 
                     #if time.localtime()[5] != current_second:   #每秒只會抓一次
