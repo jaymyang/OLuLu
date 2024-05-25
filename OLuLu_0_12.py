@@ -561,7 +561,7 @@ def main():
                 current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
                 one_min_weight=[]                #print('本分鐘開始時one_min_abn',one_min_abn)   
 
-                while time.localtime()[5] == 00:
+                if time.localtime()[5] == 00:
                     #DISPLAY('','本分鐘1秒時one_min_abn')  
                     #if time.localtime()[5] != current_second:   #每秒只會抓一次
                     #    current_second=time.localtime()[5]  
@@ -612,9 +612,8 @@ def main():
                 weight_RAW.append(weight_raw_string)
                 time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
                 DISPLAY('',one_min_weight) #由於發生抓不到重量的事情，暫停去畫圖
-                #plot_scatter(weight_FLUID[-1]) #去畫圖
+            #plot_scatter(weight_FLUID[-1]) #去畫圖
                 one_min_weight=[]
-
 
         #每5分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
                 if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
