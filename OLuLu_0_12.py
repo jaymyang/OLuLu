@@ -357,7 +357,8 @@ def get_data():
     data_temp=''
     weight_temp=''
     arduinoSerial.flushInput()  
-    #DISPLAY('','GETTING DATA')
+    DISPLAY('','start getting_data')
+
     while True:
         while arduinoSerial.inWaiting():          # 若收到序列資料…
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
@@ -367,36 +368,36 @@ def get_data():
                 else:                                     #有取得資料頭後，去尾
                     data_temp=str(data_in.decode('utf-8').rstrip()) #解碼；用rstrip()去掉末尾
                     weight_temp=int(str(data_temp)[1:])             #!!!---賦值---!!!
-                    DISPLAY('',weight_temp)
+
                     break #結束，跳出迴圈
                 
             else:                #沒有取得資料尾，無效
-                arduinoSerial.flushInput() #清空
+                #arduinoSerial.flushInput() #清空
                 time.sleep(0.01) 
                 pass
         if type(weight_temp)==int: #再次確認是否取得整數
             break                  #結束，跳出迴圈
         else: #如非取得整數
-            arduinoSerial.flushInput() #清空
+            #arduinoSerial.flushInput() #清空
             weight_temp='' #清空
             pass
-    arduinoSerial.flushInput()#再次清空，因為待會還要回送並獲取Arduino端回報結果，故清空以確保
+    
     return weight_temp
     
 def get_weight(): 
     count=0
     return_data=[]
-    #DISPLAY('','GETTING WEIGHT')
+    
     while True:
-        if count >10: #由於可能需要重複取，每次重複需時將多一秒，故最多只取8次
+        if count > 8: #由於可能需要重複取，每次重複需時將多一秒，故最多只取8次
             break
         else:
             weight_data=get_data()
             time.sleep(0.01)
+            #arduinoSerial.flushInput()#再次清空，因為待會還要回送並獲取Arduino端回報結果，故清空以確保
             arduinoSerial.write(str(weight_data).encode(encoding='utf-8')) #將前述數字送去Arduino
             time.sleep(0.01)
             T_F = arduinoSerial.readline().decode('utf-8').rstrip()        #收Arduino端回覆
-            #DISPLAY('',T_F)
             if T_F =='T':           #讀取結果無誤
                 if weight_data=='': #抓到了個空
                     weight_data=-999.9 #因為序列埠只回傳整數，所以故意設定為小數
@@ -409,10 +410,9 @@ def get_weight():
             else: #如果抓到F，照講應該不管，跳過。但就怕結果通通都是-999.9，所以在main那邊還有處理
                 weight_data=-999.9
                 pass
-
-        return_data.append(weight_data)
-        count=count+1
-    #print('return_data',return_data)
+            return_data.append(weight_data)
+            count=count+1
+    DISPLAY('','complete getting_weight')
     return return_data
 
 #----------------------------------------------------------
@@ -500,7 +500,7 @@ def saving_data(saving_time, saving_weight, cutting_index,saving_raw): #位置�
             #print("file_weight:"+file_weight)
             for save_time, save_weight, save_raw in zip(file_time, file_weight, file_raw):
                 wt.writerow([save_time, save_weight, save_raw])
-            #DISPLAY('',"30分鐘重量變化："+ str(round(hour_weight_change)) +' ；存檔完成')
+            DISPLAY('',"30分鐘重量變化："+ str(round(hour_weight_change)) +' ；存檔完成')
             
         return saving_time, saving_weight,file_weight, saving_raw
 
@@ -521,8 +521,7 @@ def good_bye(): #按A或B鍵結束
 ########################################################################################################################  
 #主函式
 #主函式
-def main():
-    
+def main():    
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW
     adjusted_time=time.time()+delta_timestamp
     time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))) #改成用調整時間
@@ -552,33 +551,37 @@ def main():
     #以下開始
     while True:
         if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。
-            break
-        
+            break        
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複
 
             #current_second=time.localtime()[5]
             if time.localtime()[4] != current_minute: #time.localtime[4]不等於current_minute時，表示是新的一分鐘
-                current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
+                #current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
+              
                 one_min_weight=[]                #print('本分鐘開始時one_min_abn',one_min_abn)   
-
-                if time.localtime()[5] == 00:
+#秒數為0時開始下列動作（取值）
+                #while time.localtime()[5] == 00:
                     #DISPLAY('','本分鐘1秒時one_min_abn')  
                     #if time.localtime()[5] != current_second:   #每秒只會抓一次
                     #    current_second=time.localtime()[5]  
-                    one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight
-                    for temp_weight in one_min_weight:     #刪掉-999.9
-                        if temp_weight==-999.9:
-                            del one_min_weight[i]
-                    
+                one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight
+
+                for temp_weight in one_min_weight:     #刪掉-999.9
+                    if temp_weight==-999.9:
+                        del one_min_weight[i]
+                    else:
+                        pass
+#接著開始下列動作（賦值)
                 #print('one_min_abn',one_min_abn)
                 if len(one_min_weight)>0: #有抓到的話
                    # weight_flag==1
+                
                     if np.max(one_min_weight)-np.min(one_min_weight) <= 5:
                         weight_FLUID.append(round(np.mean(one_min_weight)))#賦值
                     else:
                         weight_FLUID.append(round(statistics.median(one_min_weight)))#賦值
-                    
-                    #接著判斷是否有異常
+                   
+   #接著判斷是否有異常
                     if one_min_abn <3:
                         if len(weight_FLUID) > 2:        #已有兩分鐘以上的數字
                             if weight_FLUID[-1]-weight_FLUID[-2]>50:     #兩次一分鐘重量相差超過50克
@@ -607,25 +610,28 @@ def main():
                     else:
                         weight_FLUID.append(0) #都非上面情況，則加0
 
+#處理要存的資料
                 weight_raw_string=",".join(str(element) for element in one_min_weight)
                 adjusted_time=time.time()+delta_timestamp
                 weight_RAW.append(weight_raw_string)
                 time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
-                DISPLAY('',one_min_weight) #由於發生抓不到重量的事情，暫停去畫圖
+                DISPLAY('',one_min_weight) #去畫圖
             #plot_scatter(weight_FLUID[-1]) #去畫圖
                 one_min_weight=[]
 
-        #每5分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
+#每5分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
                 if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
                     five_weight_change=calculate_weight_changes(10) #呼叫。取倒數10個計算重量變化
-        #利用重量變化計算趨勢與估計未來尿量
+   #利用重量變化計算趨勢與估計未來尿量
                     five_regression=calculate_regression(weight_FLUID,10)   #呼叫。以每分鐘重量差，評估趨勢（至少10個的時候才跑回歸計算趨勢）
                     if five_regression[1] < 0:
                         DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：減少")
                     else:
                         DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：穩定或增加") 
+                else:
+                    pass
 
-        #每59分或29分紀錄總尿量。為了簡化，有考慮一小時存一次即可
+#每59分或29分紀錄總尿量。為了簡化，有考慮一小時存一次即可
                 if time.localtime()[4]  == 59 and len(weight_FLUID) >= 1:
                     processed_data=saving_data(time_INDEX,weight_FLUID,59,weight_RAW) #~存檔~
                     time_INDEX=processed_data[0]      #留下縮減過的資料串列
@@ -642,15 +648,20 @@ def main():
                     pass
                 else:
                     pass
-            
-            time.sleep(0.1)
-
-        except Warning:
-            raise
+#本分鐘應做的事情全做完                
+#                time.sleep(1.5) #等1.5秒（這樣下一秒絕對不會是00）
+                pass
+                current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
+            else:
+                time.sleep(0.1)
+                pass
+#.............................................................#
+        #except Warning:
+            #raise
         except ZeroDivisionError:
             print('估計可能不準')
-        except Exception:
-            raise
+        #except Exception:
+            #raise
 ############################################################################################################################################
 
 if __name__ == '__main__':
