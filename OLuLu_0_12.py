@@ -565,10 +565,9 @@ def main():
                     #if time.localtime()[5] != current_second:   #每秒只會抓一次
                     #    current_second=time.localtime()[5]  
                 one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight
-
-                for temp_weight in one_min_weight:     #刪掉-999.9
-                    if temp_weight==-999.9:
-                        del one_min_weight[temp_weight]
+                for i in [0,len(one_min_weight)-1,1]:
+                    if one_min_weight[i]==-999.9:
+                        del one_min_weight[i]
                     else:
                         pass
 #接著開始下列動作（賦值)
