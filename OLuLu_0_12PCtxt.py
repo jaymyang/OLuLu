@@ -312,7 +312,7 @@ def main():
                     #    current_second=time.localtime()[5]  
                     one_min_weight=get_weight() #抓重量，回傳的數字放在one_min_weight
                     for i in [0,len(one_min_weight)-1,1]:
-                        if one_min_weight[i]==999.9:
+                        if one_min_weight[i]==-999.9:
                             del one_min_weight[i]
                     
                 #print('one_min_weight:',one_min_weight)
