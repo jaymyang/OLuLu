@@ -568,7 +568,7 @@ def main():
 
                 for temp_weight in one_min_weight:     #刪掉-999.9
                     if temp_weight==-999.9:
-                        del one_min_weight[i]
+                        del one_min_weight[temp_weight]
                     else:
                         pass
 #接著開始下列動作（賦值)
