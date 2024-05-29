@@ -12,7 +12,7 @@ import csv #讀寫csv檔
 import numpy as np #數學運算用
 import statistics
 import serial #序列埠通訊
-#import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
+import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
 import warnings #為了避開有的沒的警告
 from sklearn.linear_model import LinearRegression #回歸用
 import matplotlib.pyplot as plt
@@ -106,58 +106,65 @@ def initial_value(): #照講這個應該一樣用get_weight()就好
 def get_data():
     data_temp=''
     weight_temp=''
-    arduinoSerial.flushInput()    
+    arduinoSerial.flushInput()  
+    DISPLAY('','start getting_data')
+
     while True:
         while arduinoSerial.inWaiting():          # 若收到序列資料…
-
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
-            if b'\n' in data_in:
-                if str(data_in.decode('utf-8')[0]) !='A':
+            if b'\n' in data_in: #確定有取得資料尾
+                if str(data_in.decode('utf-8')[0]) !='A': #沒有取到資料頭，放棄
                     pass
-                else:
-                    data_temp=str(data_in.decode('utf-8').rstrip())#解碼；用rstrip()去掉末尾
-                    weight_temp=int(str(data_temp)[1:])
-                break
+                else:                                     #有取得資料頭後，去尾
+                    data_temp=str(data_in.decode('utf-8').rstrip()) #解碼；用rstrip()去掉末尾
+                    weight_temp=int(str(data_temp)[1:])             #!!!---賦值---!!!
+
+                    break #結束，跳出迴圈
                 
-            else:
-                time.sleep(0.1) #
+            else:                #沒有取得資料尾，無效
+                #arduinoSerial.flushInput() #清空
+                time.sleep(0.01) 
                 pass
-        if type(weight_temp)==int:
-            break
-        else:
+        if type(weight_temp)==int: #再次確認是否取得整數
+            break                  #結束，跳出迴圈
+        else: #如非取得整數
+            #arduinoSerial.flushInput() #清空
+            weight_temp='' #清空
             pass
-    arduinoSerial.flushInput()
+    
     return weight_temp
     
-
 def get_weight(): 
     count=0
     return_data=[]
+    
     while True:
-        if count >10:
+        if count > 8: #由於可能需要重複取，每次重複需時將多一秒，故最多只取8次
             break
         else:
             weight_data=get_data()
             time.sleep(0.01)
-            arduinoSerial.write(str(weight_data).encode(encoding='utf-8'))
+            #arduinoSerial.flushInput()#再次清空，因為待會還要回送並獲取Arduino端回報結果，故清空以確保
+            arduinoSerial.write(str(weight_data).encode(encoding='utf-8')) #將前述數字送去Arduino
             time.sleep(0.01)
-            T_F = arduinoSerial.readline().decode('utf-8').rstrip()
-            if T_F =='T':                
-                pass
-            else:
-                weight_data=999.9
-            if weight_data=='': #抓到了個空
-                weight_data=-999.9 #因為序列埠只回傳整數，所以故意設定為小數
-            elif weight_data=='-': #只抓到負號沒有數字
+            T_F = arduinoSerial.readline().decode('utf-8').rstrip()        #收Arduino端回覆
+            if T_F =='T':           #讀取結果無誤
+                if weight_data=='': #抓到了個空
+                    weight_data=-999.9 #因為序列埠只回傳整數，所以故意設定為小數
+                elif weight_data=='-': #只抓到負號沒有數字
+                    weight_data=-999.9
+                elif weight_data <-1000 or weight_data >3000: #可疑數字；這些閾值還可以改
+                    weight_data=-999.9
+                else:
+                    pass                            
+            else: #如果抓到F，照講應該不管，跳過。但就怕結果通通都是-999.9，所以在main那邊還有處理
                 weight_data=-999.9
-            elif weight_data <-1000 or weight_data >3000:
-                weight_data=-999.9
-            else:
                 pass
-        return_data.append(weight_data)
-        count=count+1
-    #print('return_data',return_data)
+            return_data.append(weight_data)
+            count=count+1
+    DISPLAY('','complete getting_weight')
     return return_data
+
 
 #----------------------------------------------------------
 # Function to discard outliers
@@ -267,6 +274,7 @@ def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW
     adjusted_time=time.time()+delta_timestamp
     time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))) #改成用調整時間
+    print(str(datetime.fromtimestamp(adjusted_time)))
     initial_weight_temp=initial_value()
     weight_FLUID.append(round(np.mean(initial_weight_temp)))
     if weight_FLUID[0]=='NaN':
@@ -405,12 +413,15 @@ def main():
 
 if __name__ == '__main__':
     COM_PORT = 'COM5'
-    ports = list(serial.device())
+
+    ports = list(serial.tools.list_ports.comports())
     for port in ports:
         if port.manufacturer.startswith("Arduino"):
             COM_PORT = port.name
             print("Arduino device found on " + COM_PORT)
     arduinoSerial = serial.Serial(COM_PORT, BAUD_RATES)
+    
+
     file_name = input('請輸入病歷號：') + '.csv'
     Yr=input('請輸入現在年：')
     Mo=input('請輸入現在月：')
