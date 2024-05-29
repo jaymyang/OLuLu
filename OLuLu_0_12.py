@@ -324,7 +324,9 @@ def DISPLAY(action,message3):
     x_axis=gui.draw_line(x0=20, y0=260, x1=240, y1=260, width=1, color='black')#繪0參考線    
     x_cor = np.arange(0,len(weight_plot)-1,1) 
     x_cor=x_cor[::-1] #逆轉順序以供繪圖
-    if np.max(weight_plot) < 350: #改變Y的scale
+    if len(weight_plot)==0: #有可能是空陣列沒得畫圖
+        pass
+    elif np.max(weight_plot) < 350: #改變Y的scale
         DRAW_Y(1.25,'orange',weight_plot)
     else:
         DRAW_Y(2.5,'blue',weight_plot)
@@ -520,22 +522,20 @@ def good_bye(): #按A或B鍵結束
 
 ########################################################################################################################  
 #主函式
-#主函式
-def main():    
+def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW
     adjusted_time=time.time()+delta_timestamp
-    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))) #改成用調整時間
+    #time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
+    print(str(datetime.fromtimestamp(adjusted_time)))
     initial_weight_temp=initial_value()
-    weight_FLUID.append(round(np.mean(initial_weight_temp)))
-    if weight_FLUID[0]=='NaN':
-        weight_FLUID[0]=0
+    #weight_FLUID.append(round(np.mean(initial_weight_temp)))
+    #if weight_FLUID[0]=='NaN':
+    #    weight_FLUID[0]=0
         
-    weight_RAW.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
-    DISPLAY('',time_INDEX[0][:16]+' 初始值:'+str(weight_FLUID[0]))#暫時關掉
+    #weight_RAW.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
+    DISPLAY('',str(datetime.fromtimestamp(adjusted_time))[:16]+' 初始值:'+str(initial_weight_temp))
     #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
-    adjusted_time=time.time()+delta_timestamp
-    if datetime.fromtimestamp(adjusted_time).minute== 29 or 59:
-    #if time.localtime()[4] == 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
+    if datetime.fromtimestamp(adjusted_time).minute== 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
         time.sleep(60)
     current_minute = 61
     five_weight_change=10
@@ -555,26 +555,16 @@ def main():
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複
 
             #current_second=time.localtime()[5]
-            if time.localtime()[4] != current_minute: #time.localtime[4]不等於current_minute時，表示是新的一分鐘
-                #current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
-              
-                one_min_weight=[]                #print('本分鐘開始時one_min_abn',one_min_abn)   
-#秒數為0時開始下列動作（取值）
-                #while time.localtime()[5] == 00:
-                    #DISPLAY('','本分鐘1秒時one_min_abn')  
-                    #if time.localtime()[5] != current_second:   #每秒只會抓一次
-                    #    current_second=time.localtime()[5]  
-                one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight
-                for i in [0,len(one_min_weight)-1,1]:
-                    if one_min_weight[i]==-999.9:
-                        del one_min_weight[i]
-                    else:
-                        pass
-#接著開始下列動作（賦值)
+            if time.localtime()[4] != current_minute: #time.localtime[4]不等於current_minute時，表示是新的一分鐘             
+                one_min_weight=[]  
+                one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight#接著開始下列動作（賦值)
                 #print('one_min_abn',one_min_abn)
                 if len(one_min_weight)>0: #有抓到的話
-                   # weight_flag==1
-                
+                    for i in [0,len(one_min_weight)-1,1]:
+                        if one_min_weight[i]==-999.9:
+                            del one_min_weight[i]
+                        else:
+                            pass
                     if np.max(one_min_weight)-np.min(one_min_weight) <= 5:
                         weight_FLUID.append(round(np.mean(one_min_weight)))#賦值
                     else:
