@@ -302,26 +302,18 @@ def main():
 
     #以下開始
     while True:
-        
+   
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複
-            #if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。這也是為什麼在執行到這裡之前按下A/B都不會有反應。
-            #    break
+
             #current_second=time.localtime()[5]
-            if time.localtime()[4] != current_minute: #current_time代表以下程式區塊所執行的時間。time.localtime[4]不等於current_time時，表示是新的一分鐘
-                current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
-                one_min_weight=[]
-                #weight_flag=0
-                #print('1本分鐘開始時one_min_abn',one_min_abn)   
-
-                while time.localtime()[5] == 00:
-                    #print('本分鐘01秒時one_min_abn',one_min_abn)   
-
-                    #if time.localtime()[5] != current_second:   #每秒只會抓一次
-                    #    current_second=time.localtime()[5]  
-                    one_min_weight=get_weight() #抓重量，回傳的數字放在one_min_weight
-                    for i in [0,len(one_min_weight)-1,1]:
-                        if one_min_weight[i]==-999.9:
-                            del one_min_weight[i]
+            if time.localtime()[4] != current_minute: #time.localtime[4]不等於current_minute時，表示是新的一分鐘
+                one_min_weight=[]                #print('本分鐘開始時one_min_abn',one_min_abn)   
+                one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight
+                for i in [0,len(one_min_weight)-1,1]:
+                    if one_min_weight[i]==-999.9:
+                        del one_min_weight[i]
+                    else:
+                        pass
                     
                 #print('one_min_weight:',one_min_weight)
                 #print('one_min_abn',one_min_abn)
@@ -383,9 +375,9 @@ def main():
                     else:
                         print("最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：穩定或增加") 
 
-        #每59分或29分紀錄總尿量。為了簡化，有考慮一小時存一次即可
+#每59分或29分紀錄總尿量。為了簡化，有考慮一小時存一次即可
                 if time.localtime()[4]  == 59 and len(weight_FLUID) >= 1:
-                    processed_data=saving_data(time_INDEX,weight_FLUID,59,weight_RAW) #呼叫存檔函式
+                    processed_data=saving_data(time_INDEX,weight_FLUID,59,weight_RAW) #~存檔~
                     time_INDEX=processed_data[0]      #留下縮減過的資料串列
                     weight_FLUID=processed_data[1]    #留下縮減過的資料串列
                     weight_PREVIOUS=processed_data[2] #已經存入的資料串列
@@ -400,15 +392,20 @@ def main():
                     pass
                 else:
                     pass
-            
-            time.sleep(0.1)
-
-        except Warning:
-            raise
+#本分鐘應做的事情全做完                
+#                time.sleep(1.5) #等1.5秒（這樣下一秒絕對不會是00）
+                pass
+                current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
+            else:
+                time.sleep(0.1)
+                pass
+#.............................................................#
+        #except Warning:
+            #raise
         except ZeroDivisionError:
             print('估計可能不準')
-        except Exception:
-            raise
+        #except Exception:
+            #raise
 ############################################################################################################################################
 
 if __name__ == '__main__':
