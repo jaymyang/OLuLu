@@ -2,7 +2,22 @@
 #本版為0.11d版的簡化版，去掉複雜的異常值除去機制，改成利用數字偏差與取眾數，最後與上一分鐘相比
 #在Python 3.4版使用，必須配合Pyserial 2.7. (pip install pyserial==2.7)。會做出這個分枝，是因為Unihiker不支援Python 3.4版
 
-print("Olulu PC　ver. 0.12 is starting up.")
+#print('Olulu PC　ver. 0.12 is starting up.')
+
+print('         .*%%%+                                                                                     ')
+print('     .%%%%%-===:%%%        %%%%%%%%%:                           .%%%%%%%%=                          ')
+print('   =%%%%%%%-       %%.     %%%%%%%%%:                            %%%%%%%%=                          ')
+print('  %%%%%%%%%-         %:    %%%%%%%%%:  %%%%%%%%%-   %%%%%%%%%=  .%%%%%%%%=  .%%%%%%%%-   .%%%%%%%%: ')
+print(' %%%%%%%%%%-          %=   %%%%%%%%%:  %%%%%%%%%-   %%%%%%%%%=  .%%%%%%%%=   %%%%%%%%-    %%%%%%%%: ')
+print(' %%%%%%%%%%-          #%=  %%%%%%%%%.  %%%%%%%%%:   %%%%%%%%%=  .%%%%%%%%=  .%%%%%%%%=   .%%%%%%%%: ')
+print('-%%%%%%%%%%-           %=  %%%%%%%%%.  %%%%%%%%%.   %%%%%%%%%-  .%%%%%%%%=  .%%%%%%%%=    %%%%%%%%: ')
+print('.%%%%%%%%%%-          .%=  %%%%%%%%%.  %%%%%%%%%.   %%%%%%%%%-   %%%%%%%%=  .%%%%%%%%=   .%%%%%%%%- ')
+print(' %%%%%%%%%%-          %%=  %%%%%%%%#   %%%%%%%%%.   %%%%%%%%%-  .%%%%%%%%=  .%%%%%%%%=   .%%%%%%%%- ')
+print('  %%%%%%%%%-         %%=   %%%%%%%%%.  %%%%%%%%%.   %%%%%%%%%-  .%%%%%%%%=   %%%%%%%%=   .%%%%%%%%- ')
+print('   %%%%%%%%-        %%=    %%%%%%%%%.  %%%%%%%%%:   %%%%%%%%%-  .%%%%%%%%=   %%%%%%%%=   .%%%%%%%%- ')
+print('    .%%%%%%-     +%%==     %%%%%%%%%:   %%%%%%%%*%%%%%%%%%%%%-  :%%%%%%%%=   %%%%%%%%%*%%+%%%%%%%%: ')
+print('      .:%%%%%%%%%==.       %%%%%%%%%:    -%%%%%%%== %%%%%%%%%=  -%%%%%%%%=     #%%%%%%===.%%%%%%%%: ')
+
 
 #模組
 import sys #結束程式用
@@ -81,9 +96,9 @@ def plot_scatter(Data):
     if len(str(Data))<4:
         Data=str(Data)+' '*(4-len(str(Data))) #補空白對齊
     if block_base==0:
-        print(time.localtime()[3],':',time.localtime()[4],'=',Data,"   "+"|"+chr(2593) * blocks_No)
+        print(time.localtime()[3],':',time.localtime()[4],'=',Data,'   '+'|'+chr(2593) * blocks_No)
     else:
-        print(time.localtime()[3],':',time.localtime()[4],'=',Data,str(block_base*200)+"|"+chr(2593) * blocks_No)
+        print(time.localtime()[3],':',time.localtime()[4],'=',Data,str(block_base*200)+'|'+chr(2593) * blocks_No)
     #x = np.arange(len(weight_plot))
     #plt.scatter(x, weight_plot, c='g', marker='>')
     #plt.title(Title)
@@ -107,7 +122,7 @@ def get_data():
     data_temp=''
     weight_temp=''
     arduinoSerial.flushInput()  
-    DISPLAY('','start getting_data')
+    #DISPLAY('','start getting_data')
 
     while True:
         while arduinoSerial.inWaiting():          # 若收到序列資料…
@@ -162,7 +177,7 @@ def get_weight():
                 pass
             return_data.append(weight_data)
             count=count+1
-    DISPLAY('','complete getting_weight')
+    #DISPLAY('','complete getting_weight')
     return return_data
 
 
@@ -196,11 +211,11 @@ def calculate_weight_changes(start_element):#呼叫時，要指定從串列的�
                 weight_sum=weight_sum+weight_max-weight_min #之所以不能直接用< A_min，是考慮到有可能倒完以後的重量還是比空袋重，這樣就偵測不到了
                 weight_max=weight_recent[i] #重設
                 weight_min=weight_recent[i] #重設
-                #print("可能有突減大量:"+str(weight_sum))#提醒使用者可能有誤差                               
+                #print('可能有突減大量:'+str(weight_sum))#提醒使用者可能有誤差                               
             weight_sum=weight_max-weight_min
             if small_volume<10:#這裡是預設在一個尿量波動很小的範圍的時候，直接用最大值減最小值來估計就好。不管每5分鐘或每小時，都用10gm
                 weight_Sum=small_volume
-    print("小計:"+str(weight_sum))
+    print('小計:'+str(weight_sum))
     return weight_sum
     
 # Function to perform basic regression
@@ -223,7 +238,7 @@ def calculate_regression(analysis_wt, n_of_elements):
 def saving_data(saving_time, saving_weight, cutting_index,saving_raw): #位置一為time_INDEX，二是weight_FLUID，三是分鐘
     if saving_weight:
         hour_weight_change = calculate_weight_changes(0)#從0開始算，該函式回傳數值weight_sum在此會放進hour_weight_change。
-        time_marker = time.strftime("%Y-%m-%d, %H:%M")
+        time_marker = time.strftime('%Y-%m-%d, %H:%M')
 
         saving_time_upper = [t for t in saving_time if int(t[-2:]) < 30]#表示這是00-29分的資料，放進上半。t指time，w指weight
         saving_weight_upper = [w for t, w in zip(saving_time, saving_weight) if int(t[-2:]) < 30] #把兩個串列裡相同位置的元素配在一起
@@ -248,10 +263,10 @@ def saving_data(saving_time, saving_weight, cutting_index,saving_raw): #位置�
             saving_raw = saving_raw_upper
         with open(file_name, 'a', newline='') as csvfile:
             wt = csv.writer(csvfile)
-            #print("file_weight:"+file_weight)
+            #print('file_weight:'+file_weight)
             for save_time, save_weight, save_raw in zip(file_time, file_weight, file_raw):
                 wt.writerow([save_time, save_weight, save_raw])
-            print("30分鐘重量變化："+ str(round(hour_weight_change)) +' ；存檔完成')
+            print('30分鐘重量變化：'+ str(round(hour_weight_change)) +' ；存檔完成')
             
         return saving_time, saving_weight,file_weight, saving_raw
 
@@ -273,19 +288,17 @@ def good_bye(): #按A或B鍵結束
 def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW
     adjusted_time=time.time()+delta_timestamp
-    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))) #改成用調整時間
+    #time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
     print(str(datetime.fromtimestamp(adjusted_time)))
     initial_weight_temp=initial_value()
-    weight_FLUID.append(round(np.mean(initial_weight_temp)))
-    if weight_FLUID[0]=='NaN':
-        weight_FLUID[0]=0
+    #weight_FLUID.append(round(np.mean(initial_weight_temp)))
+    #if weight_FLUID[0]=='NaN':
+    #    weight_FLUID[0]=0
         
-    weight_RAW.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
-    print(time_INDEX[0][:16]+' 初始值:'+str(weight_FLUID[0]))
+    #weight_RAW.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
+    print(str(datetime.fromtimestamp(adjusted_time))[:16]+' 初始值:'+str(initial_weight_temp))
     #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
-    adjusted_time=time.time()+delta_timestamp
-    if datetime.fromtimestamp(adjusted_time).minute== 29 or 59:
-    #if time.localtime()[4] == 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
+    if datetime.fromtimestamp(adjusted_time).minute== 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
         time.sleep(60)
 
     current_minute = 61
@@ -355,11 +368,11 @@ def main():
                     else:
                         weight_FLUID.append(0) #目前是認為如果都沒抓到，先用0填補。這可能會造成後續計算時使用去除outlier時的問題，但如果不是用去除outlier法而是使用閾值判斷+步進累加法，可能無啥影響。
                 
-                weight_raw_string=",".join(str(element) for element in one_min_weight)
+                weight_raw_string=','.join(str(element) for element in one_min_weight)
                 adjusted_time=time.time()+delta_timestamp
                 weight_RAW.append(weight_raw_string)
                 time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
-                print('weight_RAW',weight_raw_string)
+                #print('weight_RAW',weight_raw_string)
                 plot_scatter(weight_FLUID[-1]) #去畫圖
                 one_min_weight=[]
 
@@ -371,9 +384,9 @@ def main():
         #利用重量變化計算趨勢與估計未來尿量
                     five_regression=calculate_regression(weight_FLUID,10)   #呼叫。以每分鐘重量差，評估趨勢（至少10個的時候才跑回歸計算趨勢）
                     if five_regression[1] < 0:
-                        print("最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：減少")
+                        print('最近十分鐘尿量:'+str(round(five_weight_change))+'趨勢：減少')
                     else:
-                        print("最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：穩定或增加") 
+                        print('最近十分鐘尿量:'+str(round(five_weight_change))+'趨勢：穩定或增加') 
 
 #每59分或29分紀錄總尿量。為了簡化，有考慮一小時存一次即可
                 if time.localtime()[4]  == 59 and len(weight_FLUID) >= 1:
@@ -413,9 +426,9 @@ if __name__ == '__main__':
 
     ports = list(serial.tools.list_ports.comports())
     for port in ports:
-        if port.manufacturer.startswith("Arduino"):
+        if port.manufacturer.startswith('Arduino'):
             COM_PORT = port.name
-            print("Arduino device found on " + COM_PORT)
+            print('Arduino device found on ' + COM_PORT)
     arduinoSerial = serial.Serial(COM_PORT, BAUD_RATES)
     
 
@@ -426,12 +439,12 @@ if __name__ == '__main__':
     Hr=input('請輸入現在時：')
     Min=input('請輸入現在分：')
     current_time=str(Hr)+':'+str(Min)+' '+str(Mo)+' '+str(D)+' '+str(Yr)
-    delta_time=time.mktime(time.strptime(current_time,"%H:%M %m %d %Y"))
-    warnings.filterwarnings('ignore', module="matplotlib")
+    delta_time=time.mktime(time.strptime(current_time,'%H:%M %m %d %Y'))
+    #warnings.filterwarnings('ignore', module='matplotlib')
     #warnings.filterwarnings('ignore', message='invalid value encountered in scalar divide')
     #warnings.filterwarnings('ignore', message='invalid value encountered in divide')
 
     main()
     signal.signal(signal.SIGINT,good_bye)
-    print('Olulu ver. 0.11b. A or B Button pressed.')
+    print('Olulu ver. 0.12. Ctrl-C pressed.')
     sys.exit(0)
