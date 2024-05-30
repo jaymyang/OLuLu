@@ -248,14 +248,15 @@ def good_bye(): #按A或B鍵結束
 def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW
     adjusted_time=time.time()+delta_timestamp
-    time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))) #改成用調整時間
+    #time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
+    #print(str(datetime.fromtimestamp(adjusted_time)))
     initial_weight_temp=initial_value()
-    weight_FLUID.append(round(np.mean(initial_weight_temp)))
-    if weight_FLUID[0]=='NaN':
-        weight_FLUID[0]=0
+    #weight_FLUID.append(round(np.mean(initial_weight_temp)))
+    #if weight_FLUID[0]=='NaN':
+    #    weight_FLUID[0]=0
         
-    weight_RAW.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
-    print(time_INDEX[0][:16]+' 初始值:'+str(weight_FLUID[0]))
+    #weight_RAW.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
+    print(str(datetime.fromtimestamp(adjusted_time))[:16]+' 初始值:'+str(initial_weight_temp))
     #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
     adjusted_time=time.time()+delta_timestamp
     if datetime.fromtimestamp(adjusted_time).minute== 29 or 59:
