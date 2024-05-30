@@ -274,7 +274,7 @@ def on_click():
     global action
     action='clean'
     
-def good_bye(sig, frame): #按A或B鍵結束    
+def good_bye(sig, frame): #按ctrl-C結束    
     with open(file_name, 'a', newline='') as csvfile:
         wt = csv.writer(csvfile)
         for save_time, save_weight, save_raw in zip(time_INDEX,weight_FLUID, weight_RAW):
