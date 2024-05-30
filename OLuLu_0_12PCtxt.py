@@ -317,26 +317,22 @@ def main():
     while True:
    
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複
-
-            #current_second=time.localtime()[5]
-            if time.localtime()[4] != current_minute: #time.localtime[4]不等於current_minute時，表示是新的一分鐘
-                one_min_weight=[]                #print('本分鐘開始時one_min_abn',one_min_abn)   
-                one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight
-                for i in [0,len(one_min_weight)-1,1]:
-                    if one_min_weight[i]==-999.9:
-                        del one_min_weight[i]
-                    else:
-                        pass
-                    
-                #print('one_min_weight:',one_min_weight)
+            if time.localtime()[4] != current_minute: #time.localtime[4]不等於current_minute時，表示是新的一分鐘             
+                one_min_weight=[]  
+                one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight#接著開始下列動作（賦值)
                 #print('one_min_abn',one_min_abn)
-                if len(one_min_weight)>0:
-                   # weight_flag==1
-                    if np.max(one_min_weight)-np.min(one_min_weight) <= 5: #10秒之中取得的數字變異不大，取平均
-                        weight_FLUID.append(round(np.mean(one_min_weight)))
-                        #
+                if len(one_min_weight)>0: #有抓到的話
+                    for i in range(0,len(one_min_weight),1):
+                        if one_min_weight[i]==-999.9:
+                            del one_min_weight[i]
+                        else:
+                            pass
+                    if np.max(one_min_weight)-np.min(one_min_weight) <= 5:
+                        weight_FLUID.append(round(np.mean(one_min_weight)))#賦值，10秒之中取得的數字變異不大，取平均
                     else:
-                        weight_FLUID.append(round(statistics.median(one_min_weight)))#10秒之中取得的數字變異較大，取中位數
+                        weight_FLUID.append(round(statistics.median(one_min_weight)))#賦值，10秒之中取得的數字變異較大，取中位數
+                        
+
                         #
 #以上先取數值，接著處理異常值
                     if one_min_abn <3: #就是沒什麼異常值的時候
