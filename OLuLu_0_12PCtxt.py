@@ -294,7 +294,6 @@ def main():
     #weight_FLUID.append(round(np.mean(initial_weight_temp)))
     #if weight_FLUID[0]=='NaN':
     #    weight_FLUID[0]=0
-        
     #weight_RAW.append(initial_weight_temp) #為了填補數據用的暫時數據，無妨。
     print(str(datetime.fromtimestamp(adjusted_time))[:16]+' 初始值:'+str(initial_weight_temp))
     #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
