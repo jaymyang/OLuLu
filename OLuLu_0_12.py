@@ -359,7 +359,7 @@ def get_data():
     data_temp=''
     weight_temp=''
     arduinoSerial.flushInput()  
-    DISPLAY('','start getting_data')
+    #DISPLAY('','start getting_data')
 
     while True:
         while arduinoSerial.inWaiting():          # 若收到序列資料…
@@ -414,7 +414,7 @@ def get_weight():
                 pass
             return_data.append(weight_data)
             count=count+1
-    DISPLAY('','complete getting_weight')
+    #DISPLAY('','complete getting_weight')
     return return_data
 
 #----------------------------------------------------------
@@ -560,7 +560,7 @@ def main():
                 one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight#接著開始下列動作（賦值)
                 #print('one_min_abn',one_min_abn)
                 if len(one_min_weight)>0: #有抓到的話
-                    for i in [0,len(one_min_weight)-1,1]:
+                    for i in range(0,len(one_min_weight),1):
                         if one_min_weight[i]==-999.9:
                             del one_min_weight[i]
                         else:
