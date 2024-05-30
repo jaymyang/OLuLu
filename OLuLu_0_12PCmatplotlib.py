@@ -241,7 +241,8 @@ def good_bye(): #按A或B鍵結束
             wt.writerow([save_time, save_weight, save_raw])
 
     print('Data saved as: '+file_name+'. Good Bye~')
-    raise KeyboardInterrupt()
+    sys.exit(0)
+    #raise KeyboardInterrupt()
 
 ########################################################################################################################  
 #主函式
