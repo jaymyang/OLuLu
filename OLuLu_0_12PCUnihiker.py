@@ -335,31 +335,23 @@ def main():
             #if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。這也是為什麼在執行到這裡之前按下A/B都不會有反應。
             #    break
             #current_second=time.localtime()[5]
-            if time.localtime()[4] != current_minute: #current_time代表以下程式區塊所執行的時間。time.localtime[4]不等於current_time時，表示是新的一分鐘
-                current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
-                one_min_weight=[]
-                #weight_flag=0
-                #print('1本分鐘開始時one_min_abn',one_min_abn)   
 
-                while time.localtime()[5] == 00:
-                    print('本分鐘01秒時one_min_abn',one_min_abn)   
-
-                    #if time.localtime()[5] != current_second:   #每秒只會抓一次
-                    #    current_second=time.localtime()[5]  
-                    one_min_weight=get_weight() #抓重量，回傳的數字放在one_min_weight
-                    for i in [1,len(one_min_weight)-1,1]:
-                        if one_min_weight[i]==999.9:
-                            del one_min_weight[i]
-                    
-                print('one_min_weight:',one_min_weight)
+            if time.localtime()[4] != current_minute: #time.localtime[4]不等於current_minute時，表示是新的一分鐘             
+                one_min_weight=[]  
+                one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight#接著開始下列動作（賦值)
                 #print('one_min_abn',one_min_abn)
-                if len(one_min_weight)>0:
-                   # weight_flag==1
-                    if np.max(one_min_weight)-np.min(one_min_weight) <= 5: #10秒之中取得的數字變異不大，取平均
-                        weight_FLUID.append(round(np.mean(one_min_weight)))
-                        #
+                if len(one_min_weight)>0: #有抓到的話
+                    for i in range(0,len(one_min_weight),1):
+                        if one_min_weight[i]==-999.9:
+                            del one_min_weight[i]
+                        else:
+                            pass
+                    if np.max(one_min_weight)-np.min(one_min_weight) <= 5:
+                        weight_FLUID.append(round(np.mean(one_min_weight)))#賦值，10秒之中取得的數字變異不大，取平均
                     else:
-                        weight_FLUID.append(round(statistics.median(one_min_weight)))#10秒之中取得的數字變異較大，取中位數
+                        weight_FLUID.append(round(statistics.median(one_min_weight)))#賦值，10秒之中取得的數字變異較大，取中位數
+                        
+
                         #
 #以上先取數值，接著處理異常值
                     if one_min_abn <3: #就是沒什麼異常值的時候
