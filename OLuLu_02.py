@@ -38,6 +38,7 @@ weight_FLUID = [] #主重量紀錄串列
 weight_PREVIOUS=[]
 weight_RAW=[]
 #以下為用於計算尿量與趨勢的串列與數值
+urine_amount=[]
 analysis_wt= []
 analysis_tmIn=[]
 value_next=[]
@@ -298,7 +299,8 @@ def plot_scatter(Title):
 #以下是監測重量時的顯示函式
 def DISPLAY(action,message3):
     gui.clear() #每次都先擦掉
-    global weight_FLUID,weight_PREVIOUS, display_text
+    global weight_FLUID,weight_PREVIOUS, urine_amount,display_text
+    #照講下面這樣寫不是一般通用寫法，結構上不漂亮，但為了暫時可以驗證可用，先這樣寫
     message2=weight_PREVIOUS #用message2代替weight_PREVIOUS，免得破壞主資料陣列
     message1=weight_FLUID    #用message1代替weight_FLUID，免得破壞主資料陣列
 #-------------------------------------------------------------
@@ -318,6 +320,8 @@ def DISPLAY(action,message3):
         weight_plot=message1
     else:
         weight_plot=message2[-23:]+message1 #合併已存檔的資料（放在前，只取最後23個是因為預留空間給標籤）與新收的資料（在後）；0為最舊的資料，最後一個是最新的資料。
+    if action=='10min':
+        weight_plot=urine_amount
     weight_plot=weight_plot[-56:] #不管如何只取後55個來畫
     
     for yn in range(0,301,20): #畫出格線
@@ -521,7 +525,7 @@ def good_bye(): #按A或B鍵結束
 ########################################################################################################################  
 #主函式
 def main():
-    global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW
+    global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW, urine_amount
     adjusted_time=time.time()+delta_timestamp
     #time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
     print(str(datetime.fromtimestamp(adjusted_time)))
@@ -603,15 +607,17 @@ def main():
                 DISPLAY('',one_min_weight) #去畫圖
             #plot_scatter(weight_FLUID[-1]) #去畫圖
                 one_min_weight=[]
-
+#留35秒時間
+                time.sleep(35)
 #每10分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
                 if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
-                    five_weight_change=calculate_weight_changes(10) #呼叫。取倒數10個計算重量變化   
+                    five_weight_change=calculate_weight_changes(10) #呼叫。取倒數10個計算重量變化 
+                    urine_amount.append(five_weight_change)                    
                     five_regression=calculate_regression(weight_FLUID,10)   #利用重量變化計算趨勢與估計未來尿量，評估趨勢（至少10個的時候才跑回歸計算趨勢）
                     if five_regression[1] < 0:
-                        DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：減少")
+                        DISPLAY('10min',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：減少")
                     else:
-                        DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：穩定或增加") 
+                        DISPLAY('10min',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：穩定或增加") 
                 else:
                     pass
 
