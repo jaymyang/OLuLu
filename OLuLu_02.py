@@ -32,7 +32,7 @@ display_text=''
 action='nil'
 arduinoSerial = None
 period_second = [0,1,2,3,4,5,6,7,8,9,10]  #設定抓取序列埠傳入資料的時間（秒）
-period_minute = [0,5,10,15,20,25,30,35,40,45,50,55]  #設定進行統計的時間（每5分鐘）
+period_minute = [0,10,20,30,40,50]  #設定進行統計的時間（每10分鐘）
 time_INDEX=[]
 weight_FLUID = [] #主重量紀錄串列
 weight_PREVIOUS=[]
@@ -425,7 +425,7 @@ def discard_outlier(wt_list): #假如信任秤，應該也可以取眾數就好
 
 # Function to calculate weight changes#需要偵測重量突減以及異常大量
 # 本版改的是只要一分鐘相差超過20公克，就視為需要重算
-def calculate_weight_changes(start_element):#呼叫時，要指定從串列的哪一個(start_element)開始計算。整點由0開始把全部的拿來算；每五分鐘從-10開始拿來算。
+def calculate_weight_changes(start_element):#呼叫時，要指定從串列的哪一個(start_element)開始計算。整點由0開始把全部的拿來算；每十分鐘從-10開始拿來算。
     global weight_FLUID
     weight_sum=0
     #print('calculate_weight_changes:weight_FLUID',weight_FLUID)
@@ -433,23 +433,23 @@ def calculate_weight_changes(start_element):#呼叫時，要指定從串列的�
         weight_max=weight_FLUID[-start_element] #先將最大值設成起始值
         weight_min=weight_FLUID[-start_element] #先將最小值設成起始值
         weight_recent=weight_FLUID[-start_element:] #工作用串列
-        small_volume=np.max(weight_FLUID[-start_element])-np.min(weight_FLUID[-start_element])
-        for i, element in enumerate(weight_recent):
-            if weight_recent[i]>weight_max: #一個一個比較
-                if weight_recent[i]> (weight_max+1500): #一分鐘差1500克，可能有問題
-                    pass
+        small_volume=np.max(weight_FLUID[-start_element])-np.min(weight_FLUID[-start_element]) #這邊先計算是否為small volume
+        #---以下這段與01X版不同---
+        for i in range(1,len(weight_recent)-1,1): 
+            if abs(weight_recent[i]-weight_recent[i-1])<20: #假設相差小於20克是合理的
+                if weight_recent[i]>weight_max: 
+                    weight_max=weight_recent[i] #假如目前這個比較大，就把weight_max數值設為目前這個
+                elif weight_recent[i]<weight_max: 
+                    weight_min=weight_recent[i] #假如目前這個比較大，就把weight_max數值設為目前這個
                 else:
-                    weight_max=weight_recent[i] #假如目前這個比前一個大，就把weight_max數值設為目前這個
-#            if weight_recent[i]<(weight_min+(weight_max-weight_min)/2): #發現突然減少（在上面那種小便很少的情形，不能一直進這個一直累加）
-            if weight_recent[i]<weight_min/2: #發現突然減少（在上面那種小便很少的情形，不能一直進這個一直累加）
-                weight_sum=weight_sum+weight_max-weight_min #之所以不能直接用< A_min，是考慮到有可能倒完以後的重量還是比空袋重，這樣就偵測不到了
+                    pass
+            else:
+                weight_sum=weight_sum+weight_max-weight_min #本階段結束，將本階段重量差加上原重量差，視為尿量
                 weight_max=weight_recent[i] #重設
                 weight_min=weight_recent[i] #重設
-                #DISPLAY('',"可能有突減大量:"+str(weight_sum))#提醒使用者可能有誤差                                
-            weight_sum=weight_max-weight_min
-            if small_volume<10:#這裡是預設在一個尿量波動很小的範圍的時候，直接用最大值減最小值來估計就好。不管每5分鐘或每小時，都用10gm
-                weight_Sum=small_volume
-    #DISPLAY('',"小計:"+str(weight_sum))
+                   
+        if small_volume<10:#這裡是預設在一個尿量波動很小的範圍的時候，直接用最大值減最小值來估計就好。不管每5分鐘或每小時，都用10gm
+            weight_Sum=small_volume
     return weight_sum
     
 # Function to perform basic regression
@@ -604,7 +604,7 @@ def main():
             #plot_scatter(weight_FLUID[-1]) #去畫圖
                 one_min_weight=[]
 
-#每5分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
+#每10分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
                 if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
                     five_weight_change=calculate_weight_changes(10) #呼叫。取倒數10個計算重量變化   
                     five_regression=calculate_regression(weight_FLUID,10)   #利用重量變化計算趨勢與估計未來尿量，評估趨勢（至少10個的時候才跑回歸計算趨勢）
