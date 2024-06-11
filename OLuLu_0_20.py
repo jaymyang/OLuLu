@@ -1,12 +1,10 @@
-# On Line urine Lever urility ver 0.2
-#版次0.2的要點
-#1.簡化get_weight，每分鐘只抓一次，由Arduino統一發送10秒數據的方式。
-#結果發現即使是固定負重的時候，仍然發生重量飄移（上下幾公克）的狀況。考慮改為hybrid 方法，就是Arduino取數秒資料後一次送來。
+# On Line urine Lever urility ver 0.2，要點如下
+#1.由於不明原因，在Arduino收資料時會出現異常數字（5公斤的那個），所以暫時放棄只抓一次或是抓多秒統一發送的方法，改回舊法。
 #2.加上顯示8小時之內尿量趨勢的功能
 #3.加上wifi ftp傳輸檔案功能（還在構思）
 #覺得加上音效太麻煩，所以沒加
 
-print("Olulu ver. 0.12 is starting up.")
+print("Olulu ver. 0.20 is starting up.")
 #GUI功能
 from unihiker import GUI   # Unihier GUI package
 gui = GUI() 
@@ -23,12 +21,12 @@ import numpy as np #數學運算用
 import statistics
 import serial #序列埠通訊
 import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
-message_text.config(x=1,y=302, font_size=10,text="Starting up.....75% modules imported.")
 import warnings #為了避開有的沒的警告
+message_text.config(x=1,y=302, font_size=10,text="Pending importing sklearn.....")
 from sklearn.linear_model import LinearRegression #回歸用
 message_text.config(x=1,y=302, font_size=10,text="All modules imported. Finding Arduino device.")
 
-global display_text,action, YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time,delta_timestamp
+global display_text,action, YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time,delta_timestamp,urine_amount
 # Initialize variables
 display_text=''
 action='nil'
@@ -40,7 +38,7 @@ weight_FLUID = [] #主重量紀錄串列
 weight_PREVIOUS=[]
 weight_RAW=[]
 #以下為用於計算尿量與趨勢的串列與數值
-urine_amount=[]
+urine_amount=[0]
 analysis_wt= []
 analysis_tmIn=[]
 value_next=[]
@@ -68,7 +66,7 @@ HOUR_action='nil'
 MINUTE_action='nil'
 modify_time='nil' #因為Unihiker如不連上網路就會設定在2019年，本變數乃用於使用者輸入現在時間之校正用
 
-###########################################################################################   
+################################--GUI (NUMBER ENTRY)--####################################   
 #以下是鍵盤與顯示用函式
 def INPUT():
     global B1,B2,B3,B4,B5,B6,B7,B8,B9,BB,B0,BE,txt
@@ -129,7 +127,7 @@ def INPUT():
            # buttons()
             time.sleep(0.1)#增加等待，防止程序退出和卡住
 
-#######################################################################################
+#################################--GUI (TIME ENTRY)--##############################################
 #以下是更改時間用函式
 def DELTA_TIME():
     global YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time
@@ -283,10 +281,8 @@ def DELTA_TIME():
             break
         else:
             time.sleep(0.1)
-
-
-##########################################################################################################
-# Function to plot scatter plot
+###########################################################################################
+# Function to plot scatter plot （這是PC版用的）
 def plot_scatter(Title):
     global weight_FLUID,weight_PREVIOUS
     weight_plot=weight_PREVIOUS+weight_FLUID
@@ -297,29 +293,14 @@ def plot_scatter(Title):
     plt.xlim([0, 60])
     plt.show(block=False)
     plt.pause(0.1)
-##########################################################################################################
-#以下是監測重量時的顯示函式
+##############################--GUI (DISPLAYING)--#############################################
+#以下是監測重量顯示函式
+
 def DISPLAY(action,message3):
     gui.clear() #每次都先擦掉
     global weight_FLUID,weight_PREVIOUS, urine_amount,display_text
-    #照講下面這樣寫不是一般通用寫法，結構上不漂亮，但為了暫時可以驗證可用，先這樣寫
     message2=weight_PREVIOUS #用message2代替weight_PREVIOUS，免得破壞主資料陣列
     message1=weight_FLUID    #用message1代替weight_FLUID，免得破壞主資料陣列
-#-------------------------------------------------------------
-    def DRAW_Y(scale,color_code,weight_plot):
-        for y_tick in range(300,0,-20): #座標點
-            y_axis_label=gui.draw_text(x=10,y=y_tick, text=round(scale/2.5*(650-2.5*y_tick)), color='black', origin='center',font_size=6)
-        if color_code =='yellow':
-            x_axis_label=gui.draw_text(x=120,y=265, text='urine amount in past 8 hours', color='black', origin='center',font_size=8)
-        else:
-            for x_tick in range(238,37,-40): #座標點
-                x_axis_label=gui.draw_text(x=x_tick,y=265, text=str(int(x_tick/4-60)), color='black', origin='center',font_size=8)
-        for i in range(0,len(weight_plot)-1,1):
-            if weight_plot[i] < 0:#負值用黑線繪圖；照講寬度應該是要留4
-                scatter=gui.draw_line(x0=238-4*x_cor[i], y0=260,x1=238-4*x_cor[i], y1=round(260-weight_plot[i]/scale)-1, width=3, color="black") 
-            else:#正值依照scale選顏色 
-                scatter=gui.draw_line(x0=238-4*x_cor[i], y0=260,x1=238-4*x_cor[i], y1=round(260-weight_plot[i]/scale)-1, width=3, color=color_code)
-#-------------------------------------------------------------  
     if message2==[]: #第一輪沒有weight_PREVIOUS，所以只需要顯示weight_FLUID
         weight_plot=message1
     else:
@@ -327,25 +308,14 @@ def DISPLAY(action,message3):
     if action=='10min':
         weight_plot=urine_amount
     weight_plot=weight_plot[-56:] #不管如何只取後55個來畫
-#以上取好了準備要繪圖的值    
+    
+    #以上取好了準備要繪圖的值    
     for yn in range(0,301,20): #畫出格線
         x_grid=gui.draw_line(x0=20, y0=yn, x1=240, y1=yn, width=1, color=(122, 222, 44))#繪橫線，重量/2.5為座標，故一點=2.5克，上下範圍750克，每格50克，且不排斥負數
     for xn in range(20,240,20):
         y_grid=gui.draw_line(x0=xn, y0=1, x1=xn, y1=300, width=1, color=(122, 222, 44)) #繪縱線，共12線11格，每格20點，5分鐘    
     x_axis=gui.draw_line(x0=20, y0=260, x1=240, y1=260, width=1, color='black')#繪0參考線    
-    x_cor = np.arange(0,len(weight_plot)-1,1) 
-    x_cor=x_cor[::-1] #逆轉順序以供繪圖
-    if message3=='':
-        message3=display_text #display_text是用來再現先前所顯示的內容
-    else:
-        pass
-    message_text=gui.draw_text(x=1,y=302, font_size=10,text=message3)
-    display_text=message3
-  
-
-    if action=='clean':
-        gui.clear()
-    elif len(weight_plot)==0: #有可能是空陣列沒得畫圖
+    if len(weight_plot)==0: #有可能是空陣列沒得畫圖
         pass
     elif action=='10min':
         DRAW_Y(2.5,'yellow',urine_amount)         
@@ -354,56 +324,94 @@ def DISPLAY(action,message3):
             DRAW_Y(1.25,'orange',weight_plot)  
         else:
             DRAW_Y(2.5,'blue',weight_plot)
-        
-        
+    
+    if message3=='':
+        message3=display_text #display_text是用來再現先前所顯示的內容
+    else:
+        pass
+    message_text=gui.draw_text(x=1,y=302, font_size=10,text=message3)
+    display_text=message3  
+    
+    if action=='clean':
+        gui.clear()              
     time.sleep(0.1)
-###############################################################################
-
-# Function to get weight from Arduino
-def initial_value(): #照講這個應該一樣用get_weight()就好
-    while True:
-        try:
-            initial_data_in = arduinoSerial.readline()
-            initial_data = data_in.decode('utf-8') #得到的type為string
-            initial_weight_temp=int(initial_data)
-        except:
-            initial_weight_temp=0
-        return initial_weight_temp
-        break
-#-------------------------------------------------------------------------------     
-def get_weight(): 
+    
+def DRAW_Y(scale,color_code,weight_plot):
+    x_cor = np.arange(0,len(weight_plot)-1,1) 
+    x_cor=x_cor[::-1] #逆轉順序以供繪圖
+    for y_tick in range(300,0,-20): #座標點
+        y_axis_label=gui.draw_text(x=10,y=y_tick, text=round(scale/2.5*(650-2.5*y_tick)), color='black', origin='center',font_size=6)
+    if color_code =='yellow':
+        x_axis_label=gui.draw_text(x=120,y=265, text='urine amount in past 8 hours', color='black', origin='center',font_size=8)
+    else:
+        for x_tick in range(238,37,-40): #座標點
+            x_axis_label=gui.draw_text(x=x_tick,y=265, text=str(int(x_tick/4-60)), color='black', origin='center',font_size=8)
+    for i in range(0,len(weight_plot)-1,1):
+        if weight_plot[i] < 0:#負值用黑線繪圖；照講寬度應該是要留4
+            scatter=gui.draw_line(x0=238-4*x_cor[i], y0=260,x1=238-4*x_cor[i], y1=round(260-weight_plot[i]/scale)-1, width=3, color="black") 
+        else:#正值依照scale選顏色 
+            scatter=gui.draw_line(x0=238-4*x_cor[i], y0=260,x1=238-4*x_cor[i], y1=round(260-weight_plot[i]/scale)-1, width=3, color=color_code)
+    time.sleep(0.1)
+    
+#############################--ARDUINO--############################################
+# Function to get data from Arduino
+def get_data():
     data_temp=''
     weight_temp=''
-    arduinoSerial.flushInput()  
-    print('start getting_data')
-
+    arduinoSerial.flushInput()  #由於每次呼叫都會先flush，加上Arduino一秒鐘傳一次過來，等於自然是每秒抓一次
     while True:
         while arduinoSerial.inWaiting():          # 若收到序列資料…
-            data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
+            data_in = arduinoSerial.readline() #Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
             if b'\n' in data_in: #確定有取得資料尾
                 if str(data_in.decode('utf-8')[0]) !='A': #沒有取到資料頭，放棄
                     pass
                 else:                                     #有取得資料頭後，去尾
                     data_temp=str(data_in.decode('utf-8').rstrip()) #解碼；用rstrip()去掉末尾
-                    #weight_temp=int(str(data_temp)[1:])             #!!!---賦值---!!!
+                    weight_temp=int(str(data_temp)[1:])             #!!!---賦值---!!!
                     break #結束，跳出迴圈                
             else:                #沒有取得資料尾，無效
-                #arduinoSerial.flushInput() #清空
+                #arduinoSerial.flushInput() #這時如果不清空，理論上就是再讀一次緩衝區裡的值，不用flush以後再等
                 time.sleep(0.01) 
                 pass
-        if len(data_temp) > 0:
-            break                  #結束，跳出迴圈
-        else:
-            #arduinoSerial.flushInput() #清空
-            weight_temp='' #清空
-            pass
         
-    
-    #return weight_temp
-    print(data_temp)
-    return data_temp
-
-#----------------------------------------------------------
+        if type(weight_temp)==int: #確認是否取得為整數；下面不要再flush，否則會一直盲抓
+            break                  #結束，跳出迴圈
+        else: #如非取得整數
+            weight_temp='' #清空
+            pass    
+    return weight_temp
+# Function to confirm the data got from Arduino (main entry point)
+def get_weight(): 
+    count=0
+    return_data=[]   
+    while True:
+        if count > 10: #最多只取10次
+            break
+        else:
+            weight_data=get_data()
+            time.sleep(0.01)
+            arduinoSerial.flushInput()#再次清空，因為待會還要回送並獲取Arduino端回報結果，故清空以確保
+            arduinoSerial.write(str(weight_data).encode(encoding='utf-8')) #將前述數字送去Arduino            
+            #time.sleep(0.01)
+            T_F = arduinoSerial.readline().decode('utf-8').rstrip()        #收Arduino端回覆
+            if T_F =='T':           #讀取結果無誤
+                if weight_data=='': #抓到了個空
+                    weight_data=-999.9 #因為序列埠只回傳整數，所以故意設定為小數
+                elif weight_data=='-': #只抓到負號沒有數字
+                    weight_data=-999.9
+                elif weight_data <-1000 or weight_data >3000: #可疑數字；這些閾值還可以改
+                    weight_data=-999.9
+                else:
+                    pass                            
+            else: #如果抓到F，照講應該不管，跳過。但就怕結果通通都是-999.9，所以在main那邊還有處理
+                weight_data=-999.9
+                pass
+            return_data.append(weight_data)
+            count=count+1
+            time.sleep
+    #DISPLAY('','complete getting_weight')
+    return return_data
+############################--STATISTICS--#####################################
 # Function to discard outliers
 def discard_outlier(wt_list): #假如信任秤，應該也可以取眾數就好  
     wt_array = np.array(wt_list) #轉換為array
@@ -455,8 +463,7 @@ def calculate_regression(analysis_wt, n_of_elements):
     y = np.diff(analysis_wt)
     model = LinearRegression().fit(x, y)
     return model.intercept_, model.coef_
-
-
+###############################--FILE SAVING AND ENDING--###########################################
 # Function to save data
 def saving_data(saving_time, saving_weight, cutting_index): #位置一為time_INDEX，二是weight_FLUID，三是分鐘
     if saving_weight:
@@ -507,13 +514,12 @@ def good_bye(): #按A或B鍵結束
     print('Data saved as: '+file_name+'. Good Bye~')
     raise KeyboardInterrupt()
 
-########################################################################################################################  
+#####################################--MAIN PROGRAM--##################################################  
 #主函式
 def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW, urine_amount
     adjusted_time=time.time()+delta_timestamp
-    print(str(datetime.fromtimestamp(adjusted_time)))
-    initial_weight_temp=initial_value()
+    initial_weight_temp=get_data()
     DISPLAY('',str(datetime.fromtimestamp(adjusted_time))[:16]+' 初始值:'+str(initial_weight_temp))
     #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
     if datetime.fromtimestamp(adjusted_time).minute== 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
@@ -529,60 +535,51 @@ def main():
         if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。
             break        
         try:  #首先判定時間，以確保每分鐘只會執行一次以下程式，避免資料過多或重複
-            if time.localtime()[4] != current_minute: #time.localtime[4]不等於current_minute時，表示是新的一分鐘 
-                current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
-                one_min_weight= []
-                getting_weight=get_weight()
-                weight_temp=''
-                for j in range(len(getting_weight)):
-                    if getting_weight[j] in ['-','1','2','3','4','5','6','7','8','9','0']:
-                        weight_temp=weight_temp+getting_weight[j] #組合
-                    elif getting_weight[j]== ',':
-                        if weight_temp != '':
-                            one_min_weight.append(int(weight_temp))
-                            weight_temp=''
+            if time.localtime()[4] != current_minute: #time.localtime[4]不等於current_minute時，表示是新的一分鐘       
+                one_min_weight=[]  
+                one_min_weight=get_weight()   #抓重量，回傳的數字放在one_min_weight#接著開始下列動作（賦值)
+                if len(one_min_weight)>0: #有抓到的話
+                    for i in one_min_weight:
+                        if i==-999.9:
+                            one_min_weight.remove(-999.9)
                         else:
                             pass
-                    else:
-                        pass
-                if len(one_min_weight)>0:      
                     if np.max(one_min_weight)-np.min(one_min_weight) <= 5:
-                        weight_FLUID.append(round(np.mean(one_min_weight)))#賦值，10秒之中取得的數字變異不大，取平均
+                        weight_FLUID.append(round(np.mean(one_min_weight)))#賦值
                     else:
-                        weight_FLUID.append(round(statistics.median(one_min_weight)))#賦值，10秒之中取得的數字變異較大，取中位數
-            #接著處理異常值
-                    if one_min_abn <3: #就是沒什麼異常值的時候
-                        if len(weight_FLUID) > 2: #但這樣的作法，有可能在剛開始使用時，原先為0然後掛上尿袋，卻因為大於50克被hold住，到了連續三次以後才被寫入，但外表看來就是從零跳到一兩百
-                            if weight_FLUID[-1]-weight_FLUID[-2]>50: #一分鐘重量相差超過50克
-                                weight_FLUID[-1]=weight_FLUID[-2] #直接在這邊處理，把最新加進去的那個替換成舊值
+                        weight_FLUID.append(round(statistics.median(one_min_weight)))#賦值
+                    #接著判斷是否有異常
+                    if one_min_abn <3:
+                        if len(weight_FLUID) > 2:        #已有兩分鐘以上的數字
+                            if weight_FLUID[-1]-weight_FLUID[-2]>50:     #兩次一分鐘重量相差超過50克
+                                weight_FLUID[-1]=weight_FLUID[-2]        #把最新加進去的那個替換成舊值
                                 one_min_abn = one_min_abn + 1
-                            else:#沒有過大差距
+                            else:
                                 pass
-                        else: #每30分鐘區段一開始的時候
-                            if len(weight_PREVIOUS) > 0:
+                        else:                            #目前這30分鐘區間僅有1~2個數字
+                            if len(weight_PREVIOUS) > 0: #看看前一個30分鐘區間有沒有數字
                                 if weight_FLUID[-1]-weight_PREVIOUS[-1]>50: #兩次相差超過50克
-                                    weight_FLUID[-1]=weight_PREVIOUS[-1] #直接在這邊處理，把最新加進去的那個替換成舊值
+                                    weight_FLUID[-1]=weight_PREVIOUS[-1]     #把最新加進去的那個替換成舊值
                                     one_min_abn = one_min_abn + 1
-                                else:#沒有過大差距
-                                    pass 
-                            else:#沒有舊值
-                                pass #這種情形是沒有舊值且現在也只有一兩個，就是最初剛開始。pass就是不替換，直接把數字放進去
-                    elif one_min_abn == 3: #
-                        one_min_abn=0
+                                else:
+                                    pass
+                            else:
+                                pass
+                    else: #if one_min_abn == 3: #當異常數字已經三次時
+                        one_min_abn=0 #歸零，並認定本if區塊一開始的賦值結果
                         pass
-                else: #if len(one_min_weight)==0: #沒有數值
+                    
+                else: #if len(one_min_weight)==0: #啥都沒有（也有可能全部都是異常值）
                     if len(weight_FLUID)>0:
                         weight_FLUID.append(weight_FLUID[-1]) #直接帶入上一個分鐘的
                     elif len(weight_FLUID)==0 and len(weight_PREVIOUS)>0:
                         weight_FLUID.append(weight_PREVIOUS[-1]) #直接帶入上一個分鐘的
                     else:
                         weight_FLUID.append(0) #都非上面情況，則加0
-
-------------------------------------------------------
-#處理要存的資料
-                #weight_raw_string=",".join(str(element) for element in one_min_weight)
+                #處理預備儲存的資料
+                weight_raw_string=",".join(str(element) for element in one_min_weight)
                 adjusted_time=time.time()+delta_timestamp
-                #weight_RAW.append(weight_raw_string)
+                weight_RAW.append(weight_raw_string)
                 time_INDEX.append(str(datetime.fromtimestamp(adjusted_time))[:16])#改成用調整時間（前16個字元）加入時間記錄主串列time_INDEX
                 DISPLAY('10min',"最近十分鐘尿量:"+str(round(five_weight_change))) #去畫圖
                 time.sleep(5)              #圖顯示5秒        
@@ -591,7 +588,7 @@ def main():
 #每10分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
                 if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
                     five_weight_change=calculate_weight_changes(10) #呼叫。取倒數10個計算重量變化 
-                    urine_amount.append(five_weight_change)                    
+                    urine_amount.append(urine_amount[-1]+five_weight_change)                    
                     five_regression=calculate_regression(weight_FLUID,10)   #利用重量變化計算趨勢與估計未來尿量，評估趨勢（至少10個的時候才跑回歸計算趨勢）
                     if five_regression[1] < 0:
                         DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：減少")
@@ -617,25 +614,23 @@ def main():
                     pass
                 else:
                     pass
-#本分鐘應做的事情全做完                
-#                time.sleep(1.5) #等1.5秒（這樣下一秒絕對不會是00）
-                pass
-               
+                
+                current_minute=time.localtime()[4] #將current_minute設定為目前時間。以上兩行確保下列區塊每分鐘只執行一次
+            
             else:
-                time.sleep(0.1)
+                time.sleep(0.5)
                 pass
+            
 #.............................................................#
-        #except Warning:
-            #raise
+        except Warning:
+            raise
         except ZeroDivisionError:
             print('估計可能不準')
-        #except Exception:
-            #raise
-############################################################################################################################################
-
+        except Exception:
+            raise
+#####################################--MAIN PROGRAM--#################################################################
 if __name__ == '__main__':
-    #OPEN_SERIAL() #開啟序列埠，本來想寫成def，但後面flush 的地方發生錯誤
-    ports = list(serial.tools.list_ports.comports()) #重設輸入的方法之一，就是重新開port。因擔心真的有讀碼異常的情形，故將這一段寫成def
+    ports = list(serial.tools.list_ports.comports()) #重設輸入的方法之一，就是重新開port。
     for port in ports:
         if port.manufacturer.startswith( "Arduino" ):
             COM_PORT = '/dev/'+port.name
@@ -643,23 +638,19 @@ if __name__ == '__main__':
             continue    
     message_text.config(x=1,y=302, font_size=10,text="Modules imported. Port: "+COM_PORT)
     arduinoSerial = serial.Serial(COM_PORT, BAUD_RATES) #開啟port
-
     start_time=time.localtime()
     time.sleep(0.1)
     RESULT=INPUT()  #輸入病歷號
     file_name=RESULT+'.csv'
     message_text.config(x=1,y=302, font_size=10,text='file:'+file_name)
     delta_timestamp=DELTA_TIME() #輸入現在時間
-    
     #warnings.filterwarnings('ignore', module="numpy")
     #warnings.filterwarnings('ignore', message='invalid value encountered in scalar divide')
     #warnings.filterwarnings('ignore', message='invalid value encountered in divide')
     gui.on_key_click('a',on_click)#按A鍵結束
     gui.on_key_click('b',on_click)
-
-
     main()
     gui.clear
     good_bye()
-    print('Olulu ver. 0.11b. A or B Button pressed.')
+    print('Olulu ver. 0.20. A or B Button pressed.')
     sys.exit(0)
