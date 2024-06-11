@@ -11,9 +11,9 @@ def calculating(weight_cal):
         else:
             pass
         if len(weight_cal)>1:
-            if int(weight_cal[i])<weight_min and int(weight_cal[i])-int(weight_cal[i-1]) > -50: #這視為無倒尿
+            if int(weight_cal[i])<weight_min and int(weight_cal[i])-int(weight_cal[i-1]) > -20: #這視為無倒尿
                 pass
-            elif int(weight_cal[i])<weight_min and int(weight_cal[i])-int(weight_cal[i-1]) < -50: #這視為有倒尿；這是整個計算中唯一考慮到的異常值處理部分
+            elif int(weight_cal[i])<weight_min and int(weight_cal[i])-int(weight_cal[i-1]) < -20: #這視為有倒尿；這是整個計算中唯一考慮到的異常值處理部分
                 weight_sum=weight_sum+weight_max-weight_min #
                 weight_max=int(weight_cal[i]) #重設
                 weight_min=int(weight_cal[i]) #重設
