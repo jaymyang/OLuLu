@@ -6,7 +6,7 @@
 #3.加上wifi ftp傳輸檔案功能（還在構思）
 #覺得加上音效太麻煩，所以沒加
 
-print("Olulu ver. 0.12 is starting up.")
+print("Olulu ver. 0.20 is starting up.")
 #GUI功能
 from unihiker import GUI   # Unihier GUI package
 gui = GUI() 
@@ -24,7 +24,7 @@ import statistics
 import serial #序列埠通訊
 import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
 import warnings #為了避開有的沒的警告
-message_text.config(x=1,y=302, font_size=10,text="Starting up.....80% modules imported.")
+message_text.config(x=1,y=302, font_size=10,text="Starting up.....Pending improting sklearn.")
 from sklearn.linear_model import LinearRegression #回歸用
 message_text.config(x=1,y=302, font_size=10,text="All modules imported. Finding Arduino device.")
 
@@ -375,8 +375,6 @@ def get_weight():
     data_temp=''
     weight_temp=''
     arduinoSerial.flushInput()  
-    print('start getting_data')
-
     while True:
         while arduinoSerial.inWaiting():          # 若收到序列資料…
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
@@ -400,7 +398,7 @@ def get_weight():
         
     
     #return weight_temp
-    print(data_temp)
+    print(data_in)
     return data_temp
 
 #----------------------------------------------------------
