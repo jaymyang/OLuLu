@@ -1,76 +1,40 @@
 #include "HX711.h"
-String Weight = "";
+String Weight = "A";
 String temp_Weight="";
 int Sec_Count = 0;
 int Status = 0,Status_Pre = 1;
 int Flag_Up = 0,Flag_Down = 0;
 int i;
+int python_order=0;
 
 void setup()
 {
   Init_Hx711();       //初始化HX711模組連接的IO設置
-
   Serial.begin(9600);
-//  Serial.print("Welcome to use!\n");
         Get_Maopi();    //獲取毛皮
   delay(3000);
   Get_Maopi();    //獲取毛皮
-//        Serial.print("Start!\n");
 }
+
 
 void loop()
 {
-  for (i=1; i<=10; i++)
-  {
-    temp_Weight = Get_Weight(); //計算放在感測器上的重物重量
-    Weight=Weight+","+temp_Weight;
-    delay(1000);
-  }
-        
-//        if(Weight <= 5)
-//        {
-//          Status = 0;       
-//        }
-//        else
-//        {
-//          Status = 1;   
-//        }
-//          
-//        if(Status != Status_Pre)
-//        {
-//          if(Status == 1 && Status_Pre == 0)    
-//          {
-//            Flag_Up = 1;
-//          }
-//          if(Status == 0 && Status_Pre == 1)    
-//          {
-//            Flag_Down = 1;
-//          }
-//          Status_Pre = Status;         
-//        }
-        
-//        if(Flag_Up == 1)        
-//        {
-//          Flag_Up = 0;
-//          Sec_Count = 0;
-//        }
-        
-//        if(Status == 1 || Flag_Down == 1)   
-//        {
-//          Flag_Down = 0;
-          Weight='A'+Weight;
-          Serial.println(Weight); //串口顯示重量
-          //Serial.print("g "); //顯示單位
-//          if(Status == 1)
-//            Serial.print(++Sec_Count);
-//          else
-//            Serial.print(Sec_Count);
-          Serial.print("\n");
+    python_order = Serial.readString().toInt(); 
+    if (python_order==1)//Python 傳來開始信號
+      {
+      delay(1000);
+      {
+        for (i=1; i<=10; i++)
+          {
+            temp_Weight = Get_Weight(); //計算放在感測器上的重物重量
+            Weight=Weight+","+temp_Weight;
+            delay(1000);
+          }
+      Serial.println(Weight); //串口顯示重量
       Weight="";
-//        }
-        
-        
-        
-  delay(59000);       //延時59s
-
+      python_order=0;
+      delay(30000);       //延時30s
+      }
+          delay(1000);
+      }
 }
