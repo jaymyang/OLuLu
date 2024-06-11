@@ -618,12 +618,12 @@ def main():
                 time.sleep(0.5)
                 pass
 #.............................................................#
-        #except Warning:
-            #raise
+        except Warning:
+            raise
         except ZeroDivisionError:
             print('估計可能不準')
-        #except Exception:
-            #raise
+        except Exception:
+            raise
 ############################################################################################################################################
 
 if __name__ == '__main__':
