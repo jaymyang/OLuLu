@@ -375,7 +375,9 @@ def get_weight():
     data_temp=''
     weight_temp=''
     arduinoSerial.flushInput()  
+    DISPLAY("","getting")
     while True:
+        arduinoSerial.write(b"1")
         while arduinoSerial.inWaiting():          # 若收到序列資料…
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
             if b'\n' in data_in: #確定有取得資料尾
@@ -390,6 +392,7 @@ def get_weight():
                 time.sleep(0.01) 
                 pass
         if len(data_temp) > 0:
+            arduinoSerial.flushOutput()  
             break                  #結束，跳出迴圈
         else:
             #arduinoSerial.flushInput() #清空
@@ -511,7 +514,7 @@ def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW, urine_amount
     adjusted_time=time.time()+delta_timestamp
     print(str(datetime.fromtimestamp(adjusted_time)))
-    initial_weight_temp=initial_value()
+    initial_weight_temp=get_weight()
     DISPLAY('',str(datetime.fromtimestamp(adjusted_time))[:16]+' 初始值:'+str(initial_weight_temp))
     #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
     if datetime.fromtimestamp(adjusted_time).minute== 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
