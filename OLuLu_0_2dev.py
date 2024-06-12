@@ -375,7 +375,7 @@ def get_weight():
     data_temp=''
     weight_temp=''
     arduinoSerial.flushInput() 
-    arduinoSerial.flushOutput()    
+       
     arduinoSerial.write('1'.encode(encoding='utf-8'))
     while True:
         #arduinoSerial.write(b"1")
@@ -404,6 +404,7 @@ def get_weight():
     
     #return weight_temp
     print(data_in)
+    arduinoSerial.flushOutput() 
     return data_temp
 
 #----------------------------------------------------------
