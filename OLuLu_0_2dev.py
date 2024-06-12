@@ -374,11 +374,12 @@ def initial_value(): #照講這個應該一樣用get_weight()就好
 def get_weight(): 
     data_temp=''
     weight_temp=''
-    arduinoSerial.flushInput()  
-    DISPLAY("","getting")
+    arduinoSerial.flushInput() 
+    arduinoSerial.flushOutput()    
+    arduinoSerial.write('1'.encode(encoding='utf-8'))
     while True:
         #arduinoSerial.write(b"1")
-        arduinoSerial.write('1'.encode(encoding='utf-8')) 
+        #DISPLAY("","getting")
         while arduinoSerial.inWaiting():          # 若收到序列資料…
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
             if b'\n' in data_in: #確定有取得資料尾
@@ -393,7 +394,7 @@ def get_weight():
                 time.sleep(0.01) 
                 pass
         if len(data_temp) > 0:
-            arduinoSerial.flushOutput()  
+              
             break                  #結束，跳出迴圈
         else:
             #arduinoSerial.flushInput() #清空
