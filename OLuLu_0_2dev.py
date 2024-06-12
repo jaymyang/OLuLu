@@ -377,7 +377,8 @@ def get_weight():
     arduinoSerial.flushInput()  
     DISPLAY("","getting")
     while True:
-        arduinoSerial.write(b"1")
+        #arduinoSerial.write(b"1")
+        arduinoSerial.write('1'.encode(encoding='utf-8')) 
         while arduinoSerial.inWaiting():          # 若收到序列資料…
             data_in = arduinoSerial.readline() #得到的type為string；Arduino只傳資料頭識別碼(A)、整數、'\n'。由於舊版讀數仍有異常，決定用笨方法。
             if b'\n' in data_in: #確定有取得資料尾
