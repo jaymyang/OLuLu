@@ -16,7 +16,6 @@ void setup()
   Get_Maopi();    //獲取毛皮
 }
 
-
 void loop()
 {
     python_order = Serial.readString().toInt(); 
