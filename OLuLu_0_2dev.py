@@ -68,8 +68,7 @@ HOUR_action='nil'
 MINUTE_action='nil'
 modify_time='nil' #因為Unihiker如不連上網路就會設定在2019年，本變數乃用於使用者輸入現在時間之校正用
 
-###########################################################################################   
-#以下是鍵盤與顯示用函式
+####################輸入病歷號函式####################
 def INPUT():
     global B1,B2,B3,B4,B5,B6,B7,B8,B9,BB,B0,BE,txt
     global string_result,string_input
@@ -129,8 +128,8 @@ def INPUT():
            # buttons()
             time.sleep(0.1)#增加等待，防止程序退出和卡住
 
-#######################################################################################
-#以下是更改時間用函式
+####################更改時間用函式####################
+#******定義數值以及範圍******#
 def DELTA_TIME():
     global YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time
     def YEAR(action):
@@ -220,7 +219,7 @@ def DELTA_TIME():
         global modify_time
         modify_time='@'
 
-#-----------------------------------------------------------------------------------------------------   
+#*******更改時間鍵盤*******#   
     Year_set=gui.draw_text(x=120,y=60, text=str(Yr)+'年', color='red', origin='center',font_size=18)
     Month_set=gui.draw_text(x=120,y=110, text=str(Mo)+'月', color='red', origin='center',font_size=18)
     Day_set=gui.draw_text(x=120,y=160, text=str(D)+'日', color='red', origin='center',font_size=18)
@@ -239,7 +238,7 @@ def DELTA_TIME():
     Minute_p=gui.add_button(x=35, y=260, w=60, h=30, text="+", origin='center', onclick=lambda: MINUTE('P')) 
     Minute_m=gui.add_button(x=205, y=260, w=60, h=30, text="-", origin='center', onclick=lambda: MINUTE('M')) 
     Modify_OK=gui.add_button(x=120, y=300, w=60,h=30, text="OK", origin='center', onclick=lambda: modify_ok())
-                
+#**********操作**********#                
     while True:
         if YEAR_action==1:
             YEAR_action=='nil'
@@ -283,7 +282,6 @@ def DELTA_TIME():
             break
         else:
             time.sleep(0.1)
-
 
 ##########################################################################################################
 # Function to plot scatter plot
@@ -353,9 +351,7 @@ def DISPLAY(action,message3):
         if np.max(weight_plot) < 350: #改變Y的scale
             DRAW_Y(1.25,'orange',weight_plot)  
         else:
-            DRAW_Y(2.5,'blue',weight_plot)
-        
-        
+            DRAW_Y(2.5,'blue',weight_plot)        
     time.sleep(0.1)
 ###############################################################################
 
@@ -505,30 +501,29 @@ def on_click():
 def good_bye(): #按A或B鍵結束    
     with open(file_name, 'a', newline='') as csvfile:
         wt = csv.writer(csvfile)
-        for save_time, save_weight, save_raw in zip(time_INDEX,weight_FLUID, weight_RAW):
-            wt.writerow([save_time, save_weight, save_raw])
+        for save_time, save_weight in zip(time_INDEX,weight_FLUID):
+            wt.writerow([save_time, save_weight])
 
     print('Data saved as: '+file_name+'. Good Bye~')
     raise KeyboardInterrupt()
 
-########################################################################################################################  
-#主函式
+
+####################主函式####################
 def main():
     global weight_FLUID, time_INDEX, arduinoSerial, file_name,time_stamp,weight_PREVIOUS, display_text, delta_timestamp, weight_RAW, urine_amount
     adjusted_time=time.time()+delta_timestamp
     print(str(datetime.fromtimestamp(adjusted_time)))
     initial_weight_temp=get_weight()
     DISPLAY('',str(datetime.fromtimestamp(adjusted_time))[:16]+' 初始值:'+str(initial_weight_temp))
-    #改用調整時間，判斷如果是29分或59分的時候，等一分鐘以後再開始
     if datetime.fromtimestamp(adjusted_time).minute== 29 or 59: #剛好這兩個時間點的時候，寧可等一分鐘再開始，以免存個空陣列
         time.sleep(60)
     current_minute = 61
     five_weight_change=10
     one_min_weight=-999
     current_second = None
-    weight_PREVIOUS=[] #忘記先前為什麼改設空
+    weight_PREVIOUS=[] 
     one_min_abn=0
-    #以下開始
+#**********開始*********#
     while True:
         if action=="clean": #按下A或B的時候，停止main()的執行，進入程式結束階段。
             break        
@@ -539,12 +534,14 @@ def main():
                 getting_weight=get_weight()
                 weight_temp=''
                 for j in range(len(getting_weight)):
-                    if getting_weight[j] in ['-','1','2','3','4','5','6','7','8','9','0']:
-                        weight_temp=weight_temp+getting_weight[j] #組合
-                    elif getting_weight[j]== ',':
-                        if weight_temp != '':
-                            one_min_weight.append(int(weight_temp))
-                            weight_temp=''
+                    if getting_weight[j] not in [',','-','1','2','3','4','5','6','7','8','9','0']: 
+                        pass                                      #為安全起見，讀到其他字符就pass 
+                    elif getting_weight[j] in ['-','1','2','3','4','5','6','7','8','9','0']:
+                        weight_temp=weight_temp+getting_weight[j] #理論上應可組合成數字
+                    elif getting_weight[j]== ',':                 #讀到逗點，就結束這個數字
+                        if weight_temp != '':                     #如果不是空的字串
+                            one_min_weight.append(int(weight_temp)) #轉換為整數
+                            weight_temp=''                         #重設
                         else:
                             pass
                     else:
@@ -554,7 +551,7 @@ def main():
                         weight_FLUID.append(round(np.mean(one_min_weight)))#賦值，10秒之中取得的數字變異不大，取平均
                     else:
                         weight_FLUID.append(round(statistics.median(one_min_weight)))#賦值，10秒之中取得的數字變異較大，取中位數
-            #接著處理異常值
+#********處理異常值********#
                     if one_min_abn <3: #就是沒什麼異常值的時候
                         if len(weight_FLUID) > 2: #但這樣的作法，有可能在剛開始使用時，原先為0然後掛上尿袋，卻因為大於50克被hold住，到了連續三次以後才被寫入，但外表看來就是從零跳到一兩百
                             if weight_FLUID[-1]-weight_FLUID[-2]>50: #一分鐘重量相差超過50克
@@ -581,8 +578,7 @@ def main():
                         weight_FLUID.append(weight_PREVIOUS[-1]) #直接帶入上一個分鐘的
                     else:
                         weight_FLUID.append(0) #都非上面情況，則加0
-
-#處理要存的資料
+#*****處理存檔資料*****#
                 #weight_raw_string=",".join(str(element) for element in one_min_weight)
                 adjusted_time=time.time()+delta_timestamp
                 #weight_RAW.append(weight_raw_string)
@@ -591,8 +587,8 @@ def main():
                 time.sleep(5)              #圖顯示5秒        
                 DISPLAY('',one_min_weight) #去畫圖 #plot_scatter(weight_FLUID[-1]) #PC版的繪圖函式
                 one_min_weight=[]
-#每10分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
-                if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
+#***回歸分析判斷趨勢與估計尿量***#
+                if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:    #每10分依照最近十分鐘數字，的總重量變化
                     five_weight_change=calculate_weight_changes(10) #呼叫。取倒數10個計算重量變化 
                     urine_amount.append(five_weight_change)                    
                     five_regression=calculate_regression(weight_FLUID,10)   #利用重量變化計算趨勢與估計未來尿量，評估趨勢（至少10個的時候才跑回歸計算趨勢）
@@ -602,8 +598,7 @@ def main():
                         DISPLAY('',"最近十分鐘尿量:"+str(round(five_weight_change))+"趨勢：穩定或增加") 
                 else:
                     pass
-
-#每59分或29分紀錄總尿量。為了簡化，有考慮一小時存一次即可
+#***每59分或29分紀錄總尿量***
                 if time.localtime()[4]  == 59 and len(weight_FLUID) >= 1:
                     processed_data=saving_data(time_INDEX,weight_FLUID,59) #~存檔~
                     time_INDEX=processed_data[0]      #留下縮減過的資料串列
@@ -623,15 +618,14 @@ def main():
             else:
                 time.sleep(0.5)
                 pass
-#.............................................................#
+#**********結束程式**********#
         except Warning:
             raise
         except ZeroDivisionError:
             print('估計可能不準')
         except Exception:
             raise
-############################################################################################################################################
-
+####################主程式####################
 if __name__ == '__main__':
     #OPEN_SERIAL() #開啟序列埠，本來想寫成def，但後面flush 的地方發生錯誤
     ports = list(serial.tools.list_ports.comports()) #重設輸入的方法之一，就是重新開port。因擔心真的有讀碼異常的情形，故將這一段寫成def
@@ -655,7 +649,6 @@ if __name__ == '__main__':
     #warnings.filterwarnings('ignore', message='invalid value encountered in divide')
     gui.on_key_click('a',on_click)#按A鍵結束
     gui.on_key_click('b',on_click)
-
 
     main()
     gui.clear
