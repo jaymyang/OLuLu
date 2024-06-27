@@ -358,6 +358,8 @@ def main():
             #raise
         except ZeroDivisionError:
             print('估計可能不準')
+        except KeyboardInterrupt:
+            good_bye()
         #except Exception:
             #raise
 ############################################################################################################################################
