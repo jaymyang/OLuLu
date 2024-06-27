@@ -1,7 +1,7 @@
 # -*- coding: cp950 -*-
 # On-Line urine Lever utility ver 0.2 TXT版
 #1.傳輸資料改為一次全傳輸
-#在Python 3.4版使用，必須配合Pyserial 2.7. (pip install pyserial==2.7)。會做出這個分枝，是因為Unihiker不支援Python 3.4版
+#配合Python 3.4版使用；必須配合Pyserial 2.7. (pip install pyserial==2.7)。會做出這個分枝，是因為Unihiker不支援Python 3.4版
 print('         .*%%%+                                                                                     ')
 print('     .%%%%%-===:%%%        %%%%%%%%%:                           .%%%%%%%%=                          ')
 print('   =%%%%%%%-       %%.     %%%%%%%%%:                            %%%%%%%%=                          ')
@@ -379,7 +379,9 @@ if __name__ == '__main__':
     Hr=input('請輸入現在時：')
     Min=input('請輸入現在分：')
     current_time=str(Hr)+':'+str(Min)+' '+str(Mo)+' '+str(D)+' '+str(Yr)
-    delta_time=time.mktime(time.strptime(current_time,'%H:%M %m %d %Y'))
+    current_time=time.mktime(time.strptime(current_time,"%H:%M %m %d %Y"))
+    delta_time=float(current_time-time.time())
+    delta_timestamp=time.mktime(time.strptime(current_time,'%H:%M %m %d %Y'))
     #warnings.filterwarnings('ignore', module='matplotlib')
     #warnings.filterwarnings('ignore', message='invalid value encountered in scalar divide')
     #warnings.filterwarnings('ignore', message='invalid value encountered in divide')
