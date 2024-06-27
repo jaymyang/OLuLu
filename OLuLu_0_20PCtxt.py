@@ -87,18 +87,19 @@ def INPUT(item,range_L,range_U):
 ##########################################################################################################
 
 # Function to plot scatter plot，注意這裡是用字元顯示。
-def plot_scatter(Data):
+def plot_scatter(Data,adjusted_time):    
     #global weight_FLUID,weight_PREVIOUS
     #weight_plot=weight_PREVIOUS+weight_FLUID
     block_base=math.floor(int(Data)/200)
     #看看有幾個200，因為打算把每個字元代表2
     blocks_No=round((int(Data)-block_base*200)/2) #視窗開到最大。如果空間足夠，可以設得更小。
+    
     if len(str(Data))<4:
         Data=str(Data)+' '*(4-len(str(Data))) #補空白對齊
     if block_base==0:
-        print(time.localtime()[3],':',time.localtime()[4],'=',Data,'   '+'|'+chr(2593) * blocks_No)
+        print((str(datetime.fromtimestamp(adjusted_time))[11:16]),'=',Data,'   '+'|'+chr(2593) * blocks_No)
     else:
-        print(time.localtime()[3],':',time.localtime()[4],'=',Data,str(block_base*200)+'|'+chr(2593) * blocks_No)
+        print((str(datetime.fromtimestamp(adjusted_time))[11:16]),'=',Data,str(block_base*200)+'|'+chr(2593) * blocks_No)
     #x = np.arange(len(weight_plot))
     #plt.scatter(x, weight_plot, c='g', marker='>')
     #plt.title(Title)
@@ -315,7 +316,7 @@ def main():
                 #print("最近十分鐘尿量:"+str(round(five_weight_change))) #去畫圖
                 #time.sleep(5)              #圖顯示5秒        
                 #DISPLAY('',getting_weight) #去畫圖 
-                plot_scatter(weight_FLUID[-1]) #去畫圖
+                plot_scatter(weight_FLUID[-1],adjusted_time) #去畫圖
 #考慮到PC版的顯示美觀問題，將來或許取消下面的資料顯示
         #每10分鐘以最近十個數據，利用回歸分析判斷趨勢與估計尿量。
                 if time.localtime()[4] in period_minute and len(weight_FLUID) >= 11:        #先計算最近十分鐘的總重量變化
