@@ -1,3 +1,4 @@
+//本版尚未加入reset毛皮功能
 #include "HX711.h"
 String Weight = "A";
 String temp_Weight="";
@@ -11,10 +12,11 @@ void setup()
 {
   Init_Hx711();       //初始化HX711模組連接的IO設置
   Serial.begin(9600);
-        Get_Maopi();    //獲取毛皮
+        Get_Maopi();    //取皮重
   delay(3000);
-  Get_Maopi();    //獲取毛皮
+  Get_Maopi();    //再次取皮重
 }
+
 
 void loop()
 {
