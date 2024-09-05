@@ -1,18 +1,16 @@
 # On-Line urine Lever utility ver 0.2
-#更動要點如下
-#1.推測可能是因為Unihiker供電不穩，導致讀數異常。計畫發生此情形時，可將目前值傳給Arduino作為基礎值，並讓Arduino重取毛皮歸零，之後將讀得數字加上目前數字。
+#1.杜邦線用久了會鬆脫，供電不穩將導致讀數異常。計畫發生此情形時，可將目前值傳給Arduino作為基礎值，並讓Arduino重取毛皮歸零，之後將讀得數字加上目前數字。
 #2.加上顯示8小時之內尿量趨勢的功能
-#3.加上wifi ftp傳輸檔案功能（還在構思）
-#覺得加上音效太麻煩，所以沒加
-
+#未來目標：加上wifi ftp傳輸檔案功能、加上音效(在Unihiker的難度比在PC高)
+#程式開始
 print("Olulu ver. 0.21 is starting up.")
-#GUI功能
+#啟動GUI
 from unihiker import GUI   # Unihier GUI package
 gui = GUI() 
 startup_img = gui.draw_image(x=0, y=0,w=240, h=300,image='Copyright-1.png')
 txt=gui.draw_text(text="",x=120,y=10,font_size=12,origin="center",color="#0000FF")
 message_text=gui.draw_text() #
-#其他模組
+#載入模組
 message_text.config(x=1,y=302, font_size=10,text="Importing modules.")
 import sys #結束程式用
 import time #時間模組
@@ -22,23 +20,22 @@ import numpy as np #數學運算用
 import statistics
 import serial #序列埠通訊
 import serial.tools.list_ports #為了自動搜尋通訊埠。如果要加速程式，而且固定使用在Unihiker的話，這個功能可以拿掉
-import warnings #為了避開有的沒的警告
+import warnings #為了避開有的沒的警告；這個還有需要嗎？
 message_text.config(x=1,y=302, font_size=10,text="Importing sklearn.....")
 from sklearn.linear_model import LinearRegression #回歸用
 message_text.config(x=1,y=302, font_size=10,text="All modules imported. Finding Arduino device.")
-
+#==設定變數==
 global display_text,action, YEAR_action,MONTH_action,DAY_action,HOUR_action,MINUTE_action,Yr,Mo,D,Hr,Min,modify_time,delta_timestamp,urine_amount
-# Initialize variables
+#==設定週期性工作的時間點==
+period_second = [0,1,2,3,4,5,6,7,8,9,10]  #（秒）
+period_minute = [0,10,20,30,40,50]  #（每10分鐘）
+#==設定串列與變數起始值==
 display_text=''
 action='nil'
-arduinoSerial = None
-period_second = [0,1,2,3,4,5,6,7,8,9,10]  #設定抓取序列埠傳入資料的時間（秒）
-period_minute = [0,10,20,30,40,50]  #設定進行統計的時間（每10分鐘）
-time_INDEX=[]
+time_INDEX=[] #主時間串列
 weight_FLUID = [] #主重量紀錄串列
 weight_PREVIOUS=[]
 weight_RAW=[]
-#以下為用於計算尿量與趨勢的串列與數值
 urine_amount=[0]
 analysis_wt= []
 analysis_tmIn=[]
@@ -49,12 +46,12 @@ mean=None
 std_dev=None
 time_stamp=time.time()
 delta_timestamp=0
-#Unihiker序列埠使用的變數
+#==Unihiker序列埠使用的變數==
+arduinoSerial = None
 COM_PORT = 'dev/ttyACM0' 
 BAUD_RATES = 9600
 file_name = ''
-
-#使用者輸入目前時間所用的變數
+#==使用者輸入目前時間功能所使用的變數==
 Yr=2024
 Mo=6
 D=15
@@ -283,20 +280,19 @@ def DELTA_TIME():
         else:
             time.sleep(0.1)
 ###########################################################################################
-# Function to plot scatter plot （這是PC版用的）
-def plot_scatter(Title):
-    global weight_FLUID,weight_PREVIOUS
-    weight_plot=weight_PREVIOUS+weight_FLUID
-    print('weight_PLOT',weight_plot)
-    x = np.arange(len(weight_plot))
-    plt.scatter(x, weight_plot, c='g', marker='>')
-    plt.title(Title)
-    plt.xlim([0, 60])
-    plt.show(block=False)
-    plt.pause(0.1)
+# Function to plot scatter plot （這是PC版用的，故略去）
+#def plot_scatter(Title):
+#    global weight_FLUID,weight_PREVIOUS
+#    weight_plot=weight_PREVIOUS+weight_FLUID
+#    print('weight_PLOT',weight_plot)
+#    x = np.arange(len(weight_plot))
+#    plt.scatter(x, weight_plot, c='g', marker='>')
+#    plt.title(Title)
+#    plt.xlim([0, 60])
+#    plt.show(block=False)
+#    plt.pause(0.1)
 ##############################--GUI (DISPLAYING)--#############################################
 #以下是監測重量顯示函式
-
 def DISPLAY(action,message3):
     gui.clear() #每次都先擦掉
     global weight_FLUID,weight_PREVIOUS, urine_amount,display_text
