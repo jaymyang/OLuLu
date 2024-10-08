@@ -1,77 +1,82 @@
+//本版尚未加入reset毛皮功能
 #include "HX711.h"
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 
-const char* ssid = "Roseliu_5F";       // Replace with your WiFi SSID
-const char* password = "75521926";     // Replace with your WiFi password
-const char* host = "192.168.1.101";    // IP address of the PC
-const uint16_t port = 8080;            // Port number for communication
+const char* ssid = "Roseliu_5F";        // Replace with your WiFi SSID
+const char* password = "75521926"; // Replace with your WiFi password
+const char* host = "192.168.1.101";     // IP address of the PC
+const uint16_t port = 8080;             // Port number for communication
 
 String Weight = "A";
-String temp_Weight = "";
+String temp_Weight="";
+int Sec_Count = 0;
+int Status = 0,Status_Pre = 1;
+int Flag_Up = 0,Flag_Down = 0;
 int i;
+int python_order=0;
 
-void setup()
-{
-  Serial.begin(115200);
+void setup(){
+  Init_Hx711();       //初始化HX711模組連接的IO設置
+  Serial.begin(9600);
+  Get_Maopi();    //取皮重
+  delay(3000);
+  Get_Maopi();    //再次取皮重
+
+  //初始化WiFi
+  //Serial.begin(115200);
   delay(10);
-
   // Connecting to WiFi
   Serial.println();
   Serial.println("Connecting to WiFi...");
-  WiFi.begin(ssid, password);
-
+  WiFi.begin(ssid, password);  
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println();
   Serial.println("WiFi connected");
-
-  Init_Hx711();     // 初始化HX711模組連接的IO設置
-  Get_Maopi();      // 取皮重
-  delay(3000);
-  Get_Maopi();      // 再次取皮重
 }
+
 
 void loop()
 {
-  Weight = "A";  // 重置 Weight
-
-  for (i = 1; i <= 10; i++)
-  {
-    temp_Weight = Get_Weight(); // 計算放在感測器上的重物重量
-    Weight += "," + temp_Weight;
-    delay(1000);  // 每秒讀取一次
-  }
-  
-  WiFiClient client;
-
+    //python_order = Serial.readString().toInt(); 
+    //while (python_order==1)//Python 傳來開始信號
+     // {
+     for (i=1; i<=10; i++){
+            temp_Weight = Get_Weight(); //計算放在感測器上的重物重量
+            Weight=Weight+","+temp_Weight;
+            delay(1000);
+          }
+        
+      WiFiClient client;
   // Connect to the PC
-  if (!client.connect(host, port)) {
+  if (!client.connect(host, port)){
     Serial.println("Connection failed");
-    delay(5000);  // 等待5秒再重試
     return;
   }
 
   // Send message
   Serial.println("Sending message...");
-  client.println(Weight);  // 傳送數據
+  client.println(Weight);
 
-  // 等待 PC 端回應 (可選)
-  long timeout = millis() + 5000;  // 設定 5 秒的 timeout
-  while (client.connected() && !client.available() && millis() < timeout) {
+  // Wait for a response (optional)
+  while (client.connected() && client.available() == 0) {
     delay(10);
   }
 
-  // 讀取 PC 端回應
-  if (client.available()) {
-    String response = client.readStringUntil('\n');
-    Serial.println("Received response: " + response);
-  } else {
-    Serial.println("No response from server.");
+  while (client.available()) {
+    String line = client.readStringUntil('\n');
+    Serial.println(line);
   }
 
-  client.stop();  // 關閉連線
-  delay(5000);    // 等待5秒再進行下一次傳輸
+  client.stop(); // Close the connection
+  delay(5000);   // Wait before sending the next message (if needed)
+      //Serial.println(Weight); //串口顯示重量
+      //Weight="A";
+      //python_order=0;
+      //delay(10000);       //延時10s
+      //break;
+      //}
 }
