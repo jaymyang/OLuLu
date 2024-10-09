@@ -1,0 +1,52 @@
+#include "HX711.h"
+String Weight = "A";
+String temp_Weight = "";
+int Sec_Count = 0;
+int Status = 0, Status_Pre = 1;
+int Flag_Up = 0, Flag_Down = 0;
+int i;
+int python_order = 0;
+
+void setup() {
+  //Init_Hx711();       //初始化HX711模組連接的IO設置
+  //Serial.begin(9600);
+  //      Get_Maopi();    //獲取毛皮
+  //delay(3000);
+  //Get_Maopi();    //獲取毛皮
+  Setting();
+}
+
+void loop() {
+  python_order = Serial.readString().toInt();
+  while (python_order != NULL) {
+    if (python_order == 1)  //Python 傳來開始信號
+    {
+      Weighting();
+    }
+    if (python_order == 2) {
+      Setting();
+      Weighting();
+    }
+
+    delay(5000);  //延時5s
+  }
+}
+
+int Setting() {
+  Init_Hx711();  //初始化HX711模組連接的IO設置
+  Serial.begin(9600);
+  Get_Maopi();  //獲取毛皮
+  delay(3000);
+  Get_Maopi();  //獲取毛皮
+}
+
+int Weighting() {
+  for (i = 1; i <= 10; i++) {
+    temp_Weight = Get_Weight();  //計算放在感測器上的重物重量
+    Weight = Weight + "," + temp_Weight;
+    delay(500);
+  }
+  Serial.println(Weight);  //串口顯示重量
+  Weight = "A";
+  python_order = 0;
+}
