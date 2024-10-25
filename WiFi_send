@@ -1,0 +1,63 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+
+const char* ssid = "Rose-mesh";        // Replace with your WiFi SSID
+const char* password = "75521926";      // Replace with your WiFi password
+const char* host = "192.168.1.101";     // IP address of the PC
+const uint16_t port = 8080;             // Port number for communication
+char python_order;
+int data_test=0;
+WiFiClient client;
+void setup() {
+  Serial.begin(9600);
+  delay(10);
+
+  // 連接 WiFi
+  Serial.println();
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.println("WiFi connected");
+  client.println("Hi");  
+}
+
+void loop() {
+  // 連接到 Python 伺服器
+  if (!client.connect(host, port)) {
+    Serial.println("Connection failed");
+    delay(500); // 嘗試重新連接
+    return;
+  }
+
+ // 等待並接收來自 Python 的資料
+  while (client.connected()) {
+    if (client.available()) {
+      python_order = client.read();
+      Serial.println(python_order);
+      if (python_order == 'B') {
+        delay(100);
+        Serial.println("Roger");
+        client.println("Roger");  // 回報給 Python 伺服器
+        delay(5000); //模擬收集資料時間
+        data_test=data_test + 1; //模擬資料，將來改用HX711數據
+        Serial.println("資料: " + String(data_test));
+        client.println(String(data_test));  // 回傳數值給 Python 伺服器
+        python_order = 'E';
+        
+        } 
+      else {
+        ;
+        //Serial.println("nil");
+        //client.println("nil");  // 回傳訊息給 Python 伺服
+        }
+        }
+        }
+
+  // 結束連接並稍作延遲後再嘗試
+  //client.stop();
+  //delay(5000);
+}
