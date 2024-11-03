@@ -6,10 +6,13 @@ const char* ssid = "Rose-mesh";        //路由器SSID，視情況改
 const char* password = "75521926";      // 密碼
 const char* host = "192.168.1.101";     // PC端IP address of the PC
 const uint16_t port = 8080;             // Port number for communication
+
 //以下是秤重
 char python_order; //是否秤重的指令
 String Weight = "A";
 String temp_Weight = "";
+String ID = "LuLu01"; //先用固定制，每個板子要有自己的編號
+
 //HX711的設定
 int Sec_Count = 0;
 int Status = 0, Status_Pre = 1;
@@ -70,6 +73,7 @@ void loop() {
 
     // 傳送訊息
     Serial.println("Sending message...");
+    Weight=Weight+ "," + ID;
     client.println(Weight);
     python_order = 'E';
   }
