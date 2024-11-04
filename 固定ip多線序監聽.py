@@ -40,10 +40,10 @@ def handle_client(client_socket, client_address): #接收
                 message_list.pop(0)
                 new_name=message_list[-1]
                 message_list.pop(-1)
-                print(message_list)
+                #print(message_list)
                 raw_wt_list=list(map(int,message_list))
-                print("message_list",message_list)
-                print("raw_wt_list",raw_wt_list)
+                #print("message_list",message_list)
+                #print("raw_wt_list",raw_wt_list)
                 if np.max(raw_wt_list)-np.min(raw_wt_list) <= 5:
                     new_weight=round(np.mean(raw_wt_list))#賦值，10秒之中取得的數字變異不大，取平均
                 else:
@@ -64,13 +64,16 @@ def handle_client(client_socket, client_address): #接收
 
             if not message:
                 break
+            message =[]
+            message_list=[]
+            new_name=""
         except:
             break
 
     # 當客戶端中斷連線時，移除客戶端
-    print(f"[連線中斷] {client_address} 斷開連線")
-    del clients[client_address]
-    client_socket.close()
+    #print(f"[連線中斷] {client_address} 斷開連線")
+    #del clients[client_address]
+    #client_socket.close()
     
 #def send_message():#目前這個沒有在動
 #    send_port=8080
