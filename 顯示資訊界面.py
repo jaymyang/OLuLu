@@ -1,18 +1,18 @@
 import tkinter as tk
 from tkinter import ttk
 
-# 字典，存入序號和IP地址
+# 字典，存入序號和病歷號；IP地址先留著但因為主程式採浮動IP而以客戶端的ID識別，應會拿掉；Info顯示病歷號
 data = {
-    1: {"Bed":"3L01", "IP": "192.168.1.201", "Info": "Device 1 Information"},
-    2: {"Bed":"3L02", "IP": "192.168.1.202", "Info": "Device 2 Information"},
-    3: {"Bed":"3L03", "IP": "192.168.1.203", "Info": "Device 3 Information"},
-    5: {"Bed":"3L05", "IP": "192.168.1.205", "Info": "Device 5 Information"},
-    6: {"Bed":"3L06", "IP": "192.168.1.206", "Info": "Device 6 Information"},
-    7: {"Bed":"3L07", "IP": "192.168.1.207", "Info": "Device 7 Information"},
-    8: {"Bed":"3L08", "IP": "192.168.1.208", "Info": "Device 8 Information"},
-    9: {"Bed":"3L09", "IP": "192.168.1.209", "Info": "Device 9 Information"},
-    17: {"Bed":"3K17", "IP": "192.168.1.217", "Info": "Device 17 Information"},
-    18: {"Bed":"3K18", "IP": "192.168.1.218", "Info": "Device 18 Information"},
+    1: {"Bed":"Bed01", "IP": "192.168.1.201", "Info": "請輸入病歷號", client_ID='LuLu01'},
+    2: {"Bed":"Bed02", "IP": "192.168.1.202", "Info": "請輸入病歷號", client_ID='LuLu02'},
+    3: {"Bed":"Bed03", "IP": "192.168.1.203", "Info": "請輸入病歷號", client_ID='LuLu03'},
+    5: {"Bed":"Bed05", "IP": "192.168.1.205", "Info": "請輸入病歷號", client_ID='LuLu05'},
+    6: {"Bed":"Bed06", "IP": "192.168.1.206", "Info": "請輸入病歷號", client_ID='LuLu06'},
+    7: {"Bed":"Bed07", "IP": "192.168.1.207", "Info": "請輸入病歷號", client_ID='LuLu07'},
+    8: {"Bed":"Bed08", "IP": "192.168.1.208", "Info": "請輸入病歷號", client_ID='LuLu08'},
+    9: {"Bed":"Bed09", "IP": "192.168.1.209", "Info": "請輸入病歷號", client_ID='LuLu09'},
+    17: {"Bed":"Bed17", "IP": "192.168.1.217", "Info": "請輸入病歷號", client_ID='LuLu17'},
+    18: {"Bed":"Bed18", "IP": "192.168.1.218", "Info": "請輸入病歷號", client_ID='LuLu18'},
 }
 
 # 建立主畫面
@@ -42,7 +42,7 @@ def display_info(button_number):
 
 # 建立1x9的按鈕矩陣
 for i in data:
-    btn = ttk.Button(right_frame, text=f"{data[i]['Bed']}\n{data[i]['IP']}", command=lambda num=i: display_info(num))
+    btn = ttk.Button(right_frame, text=f"{data[i]['Bed']}\n{data[i]['Info']}", command=lambda num=i: display_info(num))
     btn.grid(row=i-1, column=0, pady=10)  # 使用i-1作為行索引，按鈕從第一行開始
 
 # 啟動GUI主迴圈
