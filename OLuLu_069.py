@@ -1,4 +1,4 @@
-在家裡的電腦這是070。出現NameError: name 'mapping_clients' is not defined. Did you mean: 'active_clients'?
+ 在家裡的電腦這是070。出現NameError: name 'mapping_clients' is not defined. Did you mean: 'active_clients'?
 
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
@@ -23,7 +23,7 @@ current_button_number = None  # 記錄當前顯示的按鈕號碼，來源為客
 
 # 初始化主畫面
 root = tk.Tk()
-root.title("IP Button GUI")
+root.title("OLuLu version GUI")
 root.geometry("1024x768")
 left_frame = tk.Frame(root, width=768, height=768, bg="white")
 left_frame.pack(side="left", fill="both", expand=1)
