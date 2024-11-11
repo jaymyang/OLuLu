@@ -17,6 +17,8 @@ from sklearn.linear_model import LinearRegression #回歸用
 #import matplotlib.pyplot as plt
 import signal
 import math
+import tkinter as tk
+from tkinter import ttk, simpledialog, messagebox
 
 # 客戶端字典和數據變量
 clients = {}          #字典：已連線、欲與之交流的客戶端
@@ -29,7 +31,7 @@ data=[]
 
 #----------共通函數宣告完畢------------
 #----------各函式----------------------
-# 0.初始化伺服器並接受客戶端連線，可以視為主程式
+# 0.主程式，初始化伺服器並接受客戶端連線，可以視為主程式
 def start_server():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(("192.168.1.101", 8080))  
@@ -160,8 +162,10 @@ def plot_scatter(Title,weight_plot):
     plt.xlim([0, 60])
     plt.show(block=False)
     plt.pause(0.1)
+    
 # 啟動伺服器
 start_server()
+#以下目前無作用
 while True:
     if time.localtime(time.time()).tm_sec ==30:
         print(data)
