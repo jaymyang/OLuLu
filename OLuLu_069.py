@@ -11,9 +11,9 @@ import statistics
 
 # 字典，存入序號和病歷號
 pt_info_data = {
-    1: {"Bed": "Bed01", "IP": "", "Info": "請輸入病歷號", 'client_ID': 'LuLu01'},
-    2: {"Bed": "Bed02", "IP": "", "Info": "請輸入病歷號", 'client_ID': 'LuLu02'},
-    3: {"Bed": "Bed03", "IP": "", "Info": "請輸入病歷號", 'client_ID': 'LuLu03'},
+    1: {"Bed": "Bed01", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu01'},
+    2: {"Bed": "Bed02", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu02'},
+    3: {"Bed": "Bed03", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu03'},
     # 其他床位可照此添加
 }
 clients = {}          # 已連線的客戶端
@@ -77,16 +77,6 @@ def logout_client():
     else:
         messagebox.showinfo("提示", "請先選擇病床再登出")
 
-# 主畫面按鈕
-displayok_button = tk.Button(left_frame, text="OK", command=return_to_main, font=("Arial", 12))
-displayok_button.pack(side="left", padx=20, pady=10)
-logout_client_button = tk.Button(left_frame, text="登出", command=logout_client, font=("Arial", 12))
-logout_client_button.pack(side="right", padx=20, pady=10)
-
-# 建立1x9的按鈕矩陣
-for h in pt_info_data:
-    btn = ttk.Button(right_frame, text=f"{pt_info_data[h]['Bed']}\n{pt_info_data[h]['Info']}", command=lambda num=h: display_info(num))
-    btn.grid(row=h-1, column=0, pady=10)
 
 # 0. 伺服器主程式，初始化伺服器並接受客戶端連線
 def start_server():
@@ -113,13 +103,13 @@ def scan_clients():
                     client_socket.send("1".encode())
                 except:
                     del clients[client_address]
-                    if client_address in scanned_clients:
-                        del scanned_clients[client_address]
+                    #if client_address in scanned_clients:
+                    #    del scanned_clients[client_address]
                 time.sleep(1)# 避免連續發送，等一秒
         if current_time.tm_min in min_for_saving and current_time.tm_sec == 30 and not saved:
-            for j, entry in enumerate(mapping_clients): #活躍的用戶:
-                if mapping_clients[j]['chart_no'] !='':
-                    file_name=mapping_clients[j]['chart_no']+'.csv' #用戶的病歷號
+            for j, entry in enumerate(clients): #活躍的用戶:掃描完畢是放在哪裡？
+                if clients[j]['chart_no'] !='':
+                    file_name=clients[j]['chart_no']+'.csv' #用戶的病歷號
                     saving_data(data[j]['time'], data[j]['weight'], file_name)
                     saved= True
         elif current_time.tm_sec == 31:
@@ -144,9 +134,9 @@ def saving_data(saving_time, saving_weight, file_name):
 def handle_client(client_socket, client_address):
     clients[client_address] = client_socket# 客戶端加入 clients 字典
         # 對新連入的客戶端。發送指令 '9' 要求回報身分編號
-    if client_address not in scanned_clients:
+    if client_address not in clients:
         client_socket.send("9".encode())
-        scanned_clients[client_address] = True
+        #clients[client_address] = True
         #print(f"[連線中] {client_address} 發送身分識別要求...")
     while True:
         try:
@@ -163,7 +153,7 @@ def handle_client(client_socket, client_address):
                     new_weight = round(statistics.median(raw_wt_list))
                 found = False
                 for i, entry in enumerate(data):
-                    if entry['name'] == new_name:
+                    if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
                         data[i]['time'].append(time.strftime('%Y-%m-%d, %H:%M'))
                         data[i]['weight'].append(new_weight)
                         found = True
@@ -171,14 +161,32 @@ def handle_client(client_socket, client_address):
                 if not found:
                     data.append({'name': new_name, 'time': [time.time()], 'weight': [new_weight]})
             elif message_list[0] == "R": #R字頭表回報身分編號
-                print(message_list[-1],'已連線')  # 目前寫這樣是確認程式可以執行到此處。接著要改成對應到另一個client-床位-病歷號的字典或串列
+                print(message_list[-1],'已連線')
+                client_name=message_list[-1]
+                for i, entry in enumerate(pt_info_data):                    
+                    if entry['client_ID'] == client_name:
+                        data[i]['client_name']=client_name
+
+                  # 目前寫這樣是確認程式可以執行到此處。接著要改成對應到另一個client-床位-病歷號的字典或串列
         except:
             print(f"[斷線] {client_address} 已中斷連線")
             del clients[client_address]
-            if client_address in scanned_clients:
-                del scanned_clients[client_address]
+            #if client_address in scanned_clients:
+            #    del scanned_clients[client_address]
             client_socket.close()
             break
+
+# 主畫面按鈕
+displayok_button = tk.Button(left_frame, text="OK", command=return_to_main, font=("Arial", 12))
+displayok_button.pack(side="left", padx=20, pady=10)
+logout_client_button = tk.Button(left_frame, text="登出", command=logout_client, font=("Arial", 12))
+logout_client_button.pack(side="right", padx=20, pady=10)
+
+# 建立1x9的按鈕矩陣
+for h in pt_info_data:
+    btn = ttk.Button(right_frame, text=f"{pt_info_data[h]['Bed']}\n{pt_info_data[h]['Info']}", command=lambda num=h: display_info(num))
+    btn.grid(row=h-1, column=0, pady=10)
+
 
 
 # 啟動伺服器
