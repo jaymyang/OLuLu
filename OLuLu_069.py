@@ -1,3 +1,5 @@
+在家裡的電腦這是070。出現NameError: name 'mapping_clients' is not defined. Did you mean: 'active_clients'?
+
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import socket
