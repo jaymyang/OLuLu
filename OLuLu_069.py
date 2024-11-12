@@ -1,4 +1,4 @@
- 在家裡的電腦這是070。出現NameError: name 'mapping_clients' is not defined. Did you mean: 'active_clients'?
+ #在家裡的電腦這是070。出現NameError: name 'mapping_clients' is not defined. Did you mean: 'active_clients'?
 
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
@@ -24,7 +24,6 @@ pt_info_data = {
 }
 clients = {}          # 已連線的客戶端
 data = []             # 收集數據的串列
-scanned_clients = {} 
 current_button_number = None  # 記錄當前顯示的按鈕號碼，來源為客戶，輸出為病歷號
 
 # 初始化主畫面
@@ -42,33 +41,37 @@ right_frame.pack(side="right", fill="both", expand=0)
 def display_info(button_number):
     global current_button_number
     current_button_number = button_number
-    info = pt_info_data[button_number]["Info"]
+    info_on_button = pt_info_data[button_number]["Info"] #設定為所選取的button
     
-    if info == "請輸入病歷號":
+    if info_on_button == "請輸入病歷號":
         patient_id = simpledialog.askstring("輸入病歷號", f"請輸入 {pt_info_data[button_number]['Bed']} 的病歷號:")
         if patient_id:
-            pt_info_data[button_number]["Info"] = patient_id
-            update_button_text(button_number)
+            pt_info_data[button_number]["Info"] = patient_id #設為所輸入的病歷號
+            update_button_text(button_number) #更新按鈕
             
+    #以下是從pt_info_data中抓取資料
     bed = pt_info_data[button_number]["Bed"]
     client_name = pt_info_data[button_number]["client_name"]
-    info = pt_info_data[button_number]["Info"]
-    if pt_info_data[button_number]["client_ID"] in clients:
-        client_id = pt_info_data[button_number]["client_ID"] 
-    else:
-        pass
+    info_on_button = pt_info_data[button_number]["Info"]
+    #if pt_info_data[button_number]["client_ID"] in clients:
+    client_id = pt_info_data[button_number]["client_ID"] 
+    #else:
+    #    pass
             
-    info_label.config(text=f"Button {button_number}\nBed: {bed}\nclient_name: {ip}\nInfo: {info}\nClient ID: {client_id}")
-    bar_graph() #顯示長條圖
+    info_label.config(text=f"Button {button_number}\n Bed: {bed}\n client_name: {client_name}\n Info: {info_on_button}\n Client ID: {client_id}")#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
+    #bar_graph() #顯示長條圖
     
 
 # 更新按鈕
 def update_button_text(button_number):
-    for widget in right_frame.winfo_children():
-        if widget.cget("text").startswith(pt_info_data[button_number]["Bed"]):
-            client_id_text = pt_info_data[button_number]["client_ID"] if (pt_info_data[button_number]["client_ID"] in clients) else "離線"
-            widget.config(text=f"{pt_info_data[button_number]['Bed']}\n{client_id_text}")
-            break
+    for widget in right_frame.winfo_children():        
+        #if widget.cget("text").startswith(pt_info_data[button_number]["Bed"]):
+        if pt_info_data[button_number]["client_ID"] in clients:
+            client_id_text = pt_info_data[button_number]["client_ID"]
+        else:
+            client_id_text = "離線"
+        widget.config(text=f"{pt_info_data[button_number]['Bed']}\n{client_id_text}")
+        #break
 
 # 回到主畫面
 def return_to_main():
@@ -118,6 +121,8 @@ def scan_clients():
                     #if client_address in scanned_clients:
                     #    del scanned_clients[client_address]
                 time.sleep(1)# 避免連續發送，等一秒
+            #有在思考加進斷線的客戶端就顯示為離線或是按鈕換顏色，連上了又換回正常顏色
+                
         if current_time.tm_min in min_for_saving and current_time.tm_sec == 30 and not saved:
             for j, entry in enumerate(clients): #有連線的用戶
                 if clients[j]['chart_no'] !='':
@@ -126,6 +131,7 @@ def scan_clients():
                     saved= True
         elif current_time.tm_sec == 31:
             saved = False #重設是否已存檔開關
+        time.sleep(0.1) #休息一下1
 
 # 1-1. 存檔函數。目前暫時不打算存入原始資料list，除非實際使用後常常出現怪異數值
 def saving_data(saving_time, saving_weight, file_name):
@@ -181,11 +187,11 @@ def handle_client(client_socket, client_address):
             # 如果沒有傳入資料，目前設定以前一分鐘資料補上
             if time.localtime(time.time()).tm_sec == 29:#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]                
                 for j, entry in enumerate(pt_info_data): #檢查病人名單
-                if pt_info_data[j]['client_name'] !="離線":#檢查每一位帳面上有連線的病人
-                    for k, entry in enumerate(data): #檢查每一位病人的個別資料
-                        if data[k]['time'][-1] != (time.strftime('%Y-%m-%d, %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
-                            data[k]['time'].append(time.strftime('%Y-%m-%d, %H:%M')) #加上目前時間
-                            data[k]['weight'].append(data[k]['weight'][-1]  #加上既有串列裡最後一個
+                    if pt_info_data[j]['client_name'] !="離線":#檢查每一位帳面上有連線的病人
+                        for k, entry in enumerate(data): #檢查每一位病人的個別資料
+                            if data[k]['time'][-1] != (time.strftime('%Y-%m-%d, %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
+                                data[k]['time'].append(time.strftime('%Y-%m-%d, %H:%M')) #加上目前時間
+                                data[k]['weight'].append(data[k]['weight'][-1])  #加上既有串列裡最後一個
                 
         except:
             print(f"[斷線] {client_address} 已中斷連線")
