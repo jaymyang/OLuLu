@@ -8,13 +8,19 @@ import time
 import csv
 import numpy as np
 import statistics
+from datetime import datetime, timedelta
 
 # 字典，存入序號和病歷號
 pt_info_data = {
     1: {"Bed": "Bed01", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu01'},
     2: {"Bed": "Bed02", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu02'},
     3: {"Bed": "Bed03", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu03'},
-    # 其他床位可照此添加
+    4: {"Bed": "Bed05", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu05'},
+    5: {"Bed": "Bed06", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu06'},
+    6: {"Bed": "Bed07", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu07'},
+    7: {"Bed": "Bed08", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu08'},
+    8: {"Bed": "Bed17", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu17'},
+    9: {"Bed": "Bed18", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu18'},
 }
 clients = {}          # 已連線的客戶端
 data = []             # 收集數據的串列
@@ -23,7 +29,7 @@ current_button_number = None  # 記錄當前顯示的按鈕號碼，來源為客
 
 # 初始化主畫面
 root = tk.Tk()
-root.title("OLuLu version GUI")
+root.title("OLuLu 0.70")
 root.geometry("1024x768")
 left_frame = tk.Frame(root, width=768, height=768, bg="white")
 left_frame.pack(side="left", fill="both", expand=1)
@@ -45,10 +51,16 @@ def display_info(button_number):
             update_button_text(button_number)
             
     bed = pt_info_data[button_number]["Bed"]
-    ip = pt_info_data[button_number]["IP"]
+    client_name = pt_info_data[button_number]["client_name"]
     info = pt_info_data[button_number]["Info"]
-    client_id = pt_info_data[button_number]["client_ID"] if (pt_info_data[button_number]["client_ID"] in clients) else "離線"
-    info_label.config(text=f"Button {button_number}\nBed: {bed}\nIP: {ip}\nInfo: {info}\nClient ID: {client_id}")
+    if pt_info_data[button_number]["client_ID"] in clients:
+        client_id = pt_info_data[button_number]["client_ID"] 
+    else:
+        pass
+            
+    info_label.config(text=f"Button {button_number}\nBed: {bed}\nclient_name: {ip}\nInfo: {info}\nClient ID: {client_id}")
+    bar_graph() #顯示長條圖
+    
 
 # 更新按鈕
 def update_button_text(button_number):
@@ -60,7 +72,7 @@ def update_button_text(button_number):
 
 # 回到主畫面
 def return_to_main():
-    info_label.config(text="Click a button to see details")
+    info_label.config(text="點選床位按鈕以查看資料")
 
 # 客戶端登出
 def logout_client():
@@ -75,7 +87,7 @@ def logout_client():
             update_button_text(current_button_number)
             return_to_main()
     else:
-        messagebox.showinfo("提示", "請先選擇病床再登出")
+        messagebox.showinfo("注意", "請先選擇病床再登出")
 
 
 # 0. 伺服器主程式，初始化伺服器並接受客戶端連線
@@ -107,7 +119,7 @@ def scan_clients():
                     #    del scanned_clients[client_address]
                 time.sleep(1)# 避免連續發送，等一秒
         if current_time.tm_min in min_for_saving and current_time.tm_sec == 30 and not saved:
-            for j, entry in enumerate(clients): #活躍的用戶:掃描完畢是放在哪裡？
+            for j, entry in enumerate(clients): #有連線的用戶
                 if clients[j]['chart_no'] !='':
                     file_name=clients[j]['chart_no']+'.csv' #用戶的病歷號
                     saving_data(data[j]['time'], data[j]['weight'], file_name)
@@ -166,8 +178,15 @@ def handle_client(client_socket, client_address):
                 for i, entry in enumerate(pt_info_data):                    
                     if entry['client_ID'] == client_name:
                         data[i]['client_name']=client_name
-
-                  # 目前寫這樣是確認程式可以執行到此處。接著要改成對應到另一個client-床位-病歷號的字典或串列
+            # 如果沒有傳入資料，目前設定以前一分鐘資料補上
+            if time.localtime(time.time()).tm_sec == 29:#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]                
+                for j, entry in enumerate(pt_info_data): #檢查病人名單
+                if pt_info_data[j]['client_name'] !="離線":#檢查每一位帳面上有連線的病人
+                    for k, entry in enumerate(data): #檢查每一位病人的個別資料
+                        if data[k]['time'][-1] != (time.strftime('%Y-%m-%d, %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
+                            data[k]['time'].append(time.strftime('%Y-%m-%d, %H:%M')) #加上目前時間
+                            data[k]['weight'].append(data[k]['weight'][-1]  #加上既有串列裡最後一個
+                
         except:
             print(f"[斷線] {client_address} 已中斷連線")
             del clients[client_address]
