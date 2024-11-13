@@ -10,7 +10,8 @@ import numpy as np
 import statistics
 from datetime import datetime, timedelta
 
-# 字典，存入序號和病歷號
+#----------------------------------------------------------------------------------------------#
+# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_ID，Info為病歷號，client_ID為各個客戶端的名字，需與各客戶端的arduino code對應.
 pt_info_data = {
     1: {"Bed": "Bed01", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu01'},
     2: {"Bed": "Bed02", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu02'},
@@ -22,31 +23,40 @@ pt_info_data = {
     8: {"Bed": "Bed17", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu17'},
     9: {"Bed": "Bed18", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu18'},
 }
-clients = {}          # 已連線的客戶端
-data = []             # 收集數據的串列
-current_button_number = None  # 記錄當前顯示的按鈕號碼，來源為客戶，輸出為病歷號
+# clients：連線的客戶端字典；用來控制與客戶端的溝通
+clients = {}
+# data：用來放置收集到的數據的串列；內以字典方式記錄各客戶端（病歷號）的資料
+data = []
+# current_button_number用於記錄使用者點選的按鈕號碼，用以進行資料調度與顯示
+current_button_number = None
+#----------------------------------------------------------------------------------------------#
 
 # 初始化主畫面
 root = tk.Tk()
 root.title("OLuLu 0.70")
 root.geometry("1024x768")
+##左半畫面，顯示詳細資訊區
 left_frame = tk.Frame(root, width=768, height=768, bg="white")
 left_frame.pack(side="left", fill="both", expand=1)
-info_label = tk.Label(left_frame, text="Click a button to see details", bg="white", font=("Arial", 14))
-info_label.pack(pady=50)
+dataDisplay_text = tk.Label(left_frame, text="Click a button to see details", bg="white", font=("Arial", 14))#顯示點選的資料
+dataDisplay_text.pack(pady=50)
+##右半畫面，病人床位選擇區
 right_frame = tk.Frame(root, width=256, height=768)
 right_frame.pack(side="right", fill="both", expand=0)
 
-# 選取床位（主控面板）
+# 位於右半畫面的選取床位主控面板
 def display_info(button_number):
     global current_button_number
     current_button_number = button_number
     info_on_button = pt_info_data[button_number]["Info"] #設定為所選取的button
     
+# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_ID，Info為病歷號，client_ID為各個客戶端的名字，需與各客戶端的arduino code對應.
+#    1: {"Bed": "Bed01", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu01'},
+    
     if info_on_button == "請輸入病歷號":
         patient_id = simpledialog.askstring("輸入病歷號", f"請輸入 {pt_info_data[button_number]['Bed']} 的病歷號:")
-        if patient_id:
-            pt_info_data[button_number]["Info"] = patient_id #設為所輸入的病歷號
+        if patient_id:  #輸入完成
+            pt_info_data[button_number]["Info"] = patient_id #將字典的info設為所輸入的病歷號
             update_button_text(button_number) #更新按鈕
             
     #以下是從pt_info_data中抓取資料
@@ -57,25 +67,27 @@ def display_info(button_number):
     client_id = pt_info_data[button_number]["client_ID"] 
     #else:
     #    pass
-            
-    info_label.config(text=f"Button {button_number}\n Bed: {bed}\n client_name: {client_name}\n Info: {info_on_button}\n Client ID: {client_id}")#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
+     #底下這個是左半的文字       
+    dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n client_name: {client_name}\n Info: {info_on_button}\n Client ID: {client_id}")#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
     #bar_graph() #顯示長條圖
     
 
-# 更新按鈕
+# 更新按鈕所顯示內容。本來打算依照是否連線改變色，現在覺得只要更動client_name就可以
+# 有輸入病歷號時，要更動button中的病歷號
+# 連線時顯示client_ID，離線則顯示離線
 def update_button_text(button_number):
-    for widget in right_frame.winfo_children():        
+    for widget in right_frame.winfo_children():
         #if widget.cget("text").startswith(pt_info_data[button_number]["Bed"]):
-        if pt_info_data[button_number]["client_ID"] in clients:
+        if pt_info_data[button_number]["client_name"] in clients:
             client_id_text = pt_info_data[button_number]["client_ID"]
         else:
-            client_id_text = "離線"
+            client_id_text = "偵測器離線"
         widget.config(text=f"{pt_info_data[button_number]['Bed']}\n{client_id_text}")
         #break
 
 # 回到主畫面
 def return_to_main():
-    info_label.config(text="點選床位按鈕以查看資料")
+    dataDisplay_text.config(text="點選床位按鈕以查看資料")
 
 # 客戶端登出
 def logout_client():
