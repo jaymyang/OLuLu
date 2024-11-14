@@ -164,22 +164,22 @@ def saving_data(saving_time, saving_weight, file_name):
 #a={('192.168.1.200', 21200): "socket_name:12345686"} # Replace <socket_name:12345686> with a string
 #print(a.keys())
 #print(str(a.keys()).__contains__('192.168.1.200'))
-def handle_client(client_socket, client_address):
+def handle_client(client_socket, client_address): #client_address 是新聯上的；clients是既有列表
     extising_client=False
-    for i in entry enumerate(clients):
-        if str(entry[i].keys()) contains client_address[0]:
+    for i , entry in enumerate(clients):
+        print(str(clients[i].keys()))
+        if str(clients[i].keys()).__contains__(client_address[0]): #client_address[0]就是單純的ip
            extising_client=True
            break
         else:
-           pass
- 
+           pass 
     
         # 對新連入的客戶端。發送指令 '9' 要求回報身分編號
-    if extising_client=False:
+    if extising_client==False:
         client_socket.send("9".encode())
         clients[client_address] = client_socket# 客戶端加入 clients 字典
         #clients[client_address] = True
-        #print(f"[連線中] {client_address} 發送身分識別要求...")
+        print(f"[連線中] {client_address} 發送身分識別要求...")
     while True:
         try:
             message = client_socket.recv(1024).decode()# 接收來自客戶端的訊息
@@ -218,11 +218,12 @@ def handle_client(client_socket, client_address):
                                 data[k]['weight'].append(data[k]['weight'][-1])  #加上既有串列裡最後一個
                 
         except:
-            print(f"[斷線] {client_address} 已中斷連線")
-            del clients[client_address]
+            #print(f"[斷線] {client_address} 已中斷連線")
+            #del clients[client_address]
             #if client_address in scanned_clients:
             #    del scanned_clients[client_address]
-            client_socket.close()
+            #client_socket.close()
+            time.sleep(0.1)
             break
 
 # 主畫面按鈕
