@@ -78,8 +78,8 @@ def display_info(button_number):
 def update_button_text(button_number):
     for widget in right_frame.winfo_children():
         #if widget.cget("text").startswith(pt_info_data[button_number]["Bed"]):
-        if pt_info_data[button_number]["client_name"] in clients:
-            client_id_text = pt_info_data[button_number]["client_ID"]
+        if pt_info_data[button_number]["Info"] != "請輸入病歷號":
+            client_id_text = pt_info_data[button_number]["Info"]
         else:
             client_id_text = "偵測器離線"
         widget.config(text=f"{pt_info_data[button_number]['Bed']}\n{client_id_text}")
@@ -207,7 +207,7 @@ def handle_client(client_socket, client_address):
                 client_name=message_list[-1]
                 for i, entry in enumerate(pt_info_data):                    
                     if entry['client_ID'] == client_name:
-                        data[i]['client_name']=client_name
+                        entry['client_name']=client_name #
             # 如果沒有傳入資料，目前設定以前一分鐘資料補上
             if time.localtime(time.time()).tm_sec == 29:#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]                
                 for j, entry in enumerate(pt_info_data): #檢查病人名單
