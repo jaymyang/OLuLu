@@ -160,12 +160,24 @@ def saving_data(saving_time, saving_weight, file_name):
             wt.writerow([save_time, save_weight])#, save_raw])
         #print(file_name+'存檔完成')
 
-# 2. 處理個別客戶端
+# 2. 處理個別客戶端；下面是處理socket中的東西的範例－－雖然我不懂為什麼contains前後要加底線。
+#a={('192.168.1.200', 21200): "socket_name:12345686"} # Replace <socket_name:12345686> with a string
+#print(a.keys())
+#print(str(a.keys()).__contains__('192.168.1.200'))
 def handle_client(client_socket, client_address):
-    clients[client_address] = client_socket# 客戶端加入 clients 字典
+    extising_client=False
+    for i in entry enumerate(clients):
+        if str(entry[i].keys()) contains client_address[0]:
+           extising_client=True
+           break
+        else:
+           pass
+ 
+    
         # 對新連入的客戶端。發送指令 '9' 要求回報身分編號
-    if client_address not in clients:
+    if extising_client=False:
         client_socket.send("9".encode())
+        clients[client_address] = client_socket# 客戶端加入 clients 字典
         #clients[client_address] = True
         #print(f"[連線中] {client_address} 發送身分識別要求...")
     while True:
