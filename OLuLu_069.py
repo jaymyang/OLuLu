@@ -1,5 +1,3 @@
- #在家裡的電腦這是070。出現NameError: name 'mapping_clients' is not defined. Did you mean: 'active_clients'?
-
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import socket
@@ -25,6 +23,9 @@ pt_info_data = {
 }
 # clients：連線的客戶端字典；用來控制與客戶端的溝通
 clients = {}
+# 所有連線的客戶端的集合
+connected_clients = set()
+
 # data：用來放置收集到的數據的串列；內以字典方式記錄各客戶端（病歷號）的資料
 data = []
 # current_button_number用於記錄使用者點選的按鈕號碼，用以進行資料調度與顯示
@@ -166,20 +167,25 @@ def saving_data(saving_time, saving_weight, file_name):
 #print(str(a.keys()).__contains__('192.168.1.200'))
 def handle_client(client_socket, client_address): #client_address 是新聯上的；clients是既有列表
     extising_client=False
-    for i , entry in enumerate(clients):
-        print(str(clients[i].keys()))
-        if str(clients[i].keys()).__contains__(client_address[0]): #client_address[0]就是單純的ip
-           extising_client=True
-           break
-        else:
-           pass 
+    if client_address[0] not in connected_clients:
+        client_socket.send("9".encode())
+        connected_clients.add(client_address[0])# 客戶端ip加入 clients 集合字典
+    else:
+        pass
+    #for i , entry in enumerate(clients):
+    #    print(str(clients[i].keys()))
+    #    if client_address[0] in [ip[0] for ip in clients.keys()]: #client_address[0]就是單純的ip
+    #       extising_client=True
+    #       break
+    #    else:
+    #       pass 
     
         # 對新連入的客戶端。發送指令 '9' 要求回報身分編號
-    if extising_client==False:
-        client_socket.send("9".encode())
-        clients[client_address] = client_socket# 客戶端加入 clients 字典
+    #if extising_client==False:
+    #    client_socket.send("9".encode())
+    #    clients[client_address] = client_socket# 客戶端加入 clients 字典
         #clients[client_address] = True
-        print(f"[連線中] {client_address} 發送身分識別要求...")
+    #    print(f"[連線中] {client_address} 發送身分識別要求...")
     while True:
         try:
             message = client_socket.recv(1024).decode()# 接收來自客戶端的訊息
@@ -208,6 +214,8 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
                 for i, entry in enumerate(pt_info_data):                    
                     if entry['client_ID'] == client_name:
                         entry['client_name']=client_name #
+                print(clients)
+                print(connected_clients)
             # 如果沒有傳入資料，目前設定以前一分鐘資料補上
             if time.localtime(time.time()).tm_sec == 29:#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]                
                 for j, entry in enumerate(pt_info_data): #檢查病人名單
@@ -222,7 +230,7 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
             #del clients[client_address]
             #if client_address in scanned_clients:
             #    del scanned_clients[client_address]
-            #client_socket.close()
+            client_socket.close()
             time.sleep(0.1)
             break
 
