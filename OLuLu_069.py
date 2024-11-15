@@ -9,17 +9,17 @@ import statistics
 from datetime import datetime, timedelta
 
 #----------------------------------------------------------------------------------------------#
-# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_ID，Info為病歷號，client_ID為各個客戶端的名字，需與各客戶端的arduino code對應.
+# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_name，pt_number為病歷號，client_name為各個客戶端的名字，需與各客戶端的arduino code對應.
 pt_info_data = {
-    1: {"Bed": "Bed01", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu01'},
-    2: {"Bed": "Bed02", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu02'},
-    3: {"Bed": "Bed03", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu03'},
-    4: {"Bed": "Bed05", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu05'},
-    5: {"Bed": "Bed06", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu06'},
-    6: {"Bed": "Bed07", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu07'},
-    7: {"Bed": "Bed08", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu08'},
-    8: {"Bed": "Bed17", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu17'},
-    9: {"Bed": "Bed18", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu18'},
+    1: {"Bed": "Bed01", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu01'},
+    2: {"Bed": "Bed02", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu02'},
+    3: {"Bed": "Bed03", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu03'},
+    4: {"Bed": "Bed05", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu05'},
+    5: {"Bed": "Bed06", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu06'},
+    6: {"Bed": "Bed07", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu07'},
+    7: {"Bed": "Bed08", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu08'},
+    8: {"Bed": "Bed17", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu17'},
+    9: {"Bed": "Bed18", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu18'},
 }
 # clients：連線的客戶端字典；用來控制與客戶端的溝通
 clients = {}
@@ -49,38 +49,38 @@ right_frame.pack(side="right", fill="both", expand=0)
 def display_info(button_number):
     global current_button_number
     current_button_number = button_number
-    info_on_button = pt_info_data[button_number]["Info"] #設定為所選取的button
+    info_on_button = pt_info_data[button_number]["pt_number"] #設定為所選取的button
     
-# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_ID，Info為病歷號，client_ID為各個客戶端的名字，需與各客戶端的arduino code對應.
-#    1: {"Bed": "Bed01", "client_name": "離線", "Info": "請輸入病歷號", 'client_ID': 'LuLu01'},
+# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_name，pt_number為病歷號，client_name為各個客戶端的名字，需與各客戶端的arduino code對應.
+#    1: {"Bed": "Bed01", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu01'},
     
     if info_on_button == "請輸入病歷號":
         patient_id = simpledialog.askstring("輸入病歷號", f"請輸入 {pt_info_data[button_number]['Bed']} 的病歷號:")
         if patient_id:  #輸入完成
-            pt_info_data[button_number]["Info"] = patient_id #將字典的info設為所輸入的病歷號
+            pt_info_data[button_number]["pt_number"] = patient_id #將字典的info設為所輸入的病歷號
             update_button_text(button_number) #更新按鈕
             
     #以下是從pt_info_data中抓取資料
     bed = pt_info_data[button_number]["Bed"]
-    client_name = pt_info_data[button_number]["client_name"]
-    info_on_button = pt_info_data[button_number]["Info"]
-    #if pt_info_data[button_number]["client_ID"] in clients:
-    client_id = pt_info_data[button_number]["client_ID"] 
+    client_IP = pt_info_data[button_number]["client_IP"]
+    info_on_button = pt_info_data[button_number]["pt_number"]
+    #if pt_info_data[button_number]["client_name"] in clients:
+    client_id = pt_info_data[button_number]["client_name"] 
     #else:
     #    pass
      #底下這個是左半的文字       
-    dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n client_name: {client_name}\n Info: {info_on_button}\n Client ID: {client_id}")#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
+    dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n client_IP: {client_IP}\n pt_number: {info_on_button}\n Client ID: {client_id}")#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
     #bar_graph() #顯示長條圖
     
 
-# 更新按鈕所顯示內容。本來打算依照是否連線改變色，現在覺得只要更動client_name就可以
+# 更新按鈕所顯示內容。本來打算依照是否連線改變色，現在覺得只要更動client_IP就可以
 # 有輸入病歷號時，要更動button中的病歷號
-# 連線時顯示client_ID，離線則顯示離線
+# 連線時顯示client_name，離線則顯示離線
 def update_button_text(button_number):
     for widget in right_frame.winfo_children():
         #if widget.cget("text").startswith(pt_info_data[button_number]["Bed"]):
-        if pt_info_data[button_number]["Info"] != "請輸入病歷號":
-            client_id_text = pt_info_data[button_number]["Info"]
+        if pt_info_data[button_number]["pt_number"] != "請輸入病歷號":
+            client_id_text = pt_info_data[button_number]["pt_number"]
         else:
             client_id_text = "偵測器離線"
         widget.config(text=f"{pt_info_data[button_number]['Bed']}\n{client_id_text}")
@@ -94,12 +94,12 @@ def return_to_main():
 def logout_client():
     if current_button_number is not None:
         bed = pt_info_data[current_button_number]["Bed"]
-        info = pt_info_data[current_button_number]["Info"]
+        info = pt_info_data[current_button_number]["pt_number"]
         response = messagebox.askyesno("確認登出", f"是否確定登出？\n{bed}\n{info}")
         
         if response:
-            pt_info_data[current_button_number]["Info"] = "請輸入病歷號"
-            pt_info_data[current_button_number]["client_ID"] = "登出"
+            pt_info_data[current_button_number]["pt_number"] = "請輸入病歷號"
+            pt_info_data[current_button_number]["client_name"] = "登出"
             update_button_text(current_button_number)
             return_to_main()
     else:
@@ -127,7 +127,7 @@ def scan_clients():
             active_clients = list(clients.keys())
             for client_address in active_clients:
                 client_socket = clients[client_address]
-                try:# 檢查客戶端是否仍然連線並發送訊息
+                try:# 檢查客戶端是否仍然連線並發送訊息。這邊重點在於有沒有連線（沒有連線的，發訊息會出現錯誤或者凍結），所以不要用pt_info_data的資料去發
                     client_socket.send("1".encode())
                 except:
                     del clients[client_address]
@@ -166,12 +166,12 @@ def saving_data(saving_time, saving_weight, file_name):
 #print(a.keys())
 #print(str(a.keys()).__contains__('192.168.1.200'))
 def handle_client(client_socket, client_address): #client_address 是新聯上的；clients是既有列表
-    extising_client=False
-    if client_address[0] not in connected_clients:
-        client_socket.send("9".encode())
-        connected_clients.add(client_address[0])# 客戶端ip加入 clients 集合字典
-    else:
-        pass
+    #extising_client=False
+    #if client_address[0] not in connected_clients:
+    #    client_socket.send("9".encode())
+    #    connected_clients.add(client_address[0])# 客戶端ip加入 clients 集合字典
+    #else:
+    #    pass
     #for i , entry in enumerate(clients):
     #    print(str(clients[i].keys()))
     #    if client_address[0] in [ip[0] for ip in clients.keys()]: #client_address[0]就是單純的ip
@@ -182,7 +182,20 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
     
         # 對新連入的客戶端。發送指令 '9' 要求回報身分編號
     #if extising_client==False:
-    #    client_socket.send("9".encode())
+    client_socket.send("9".encode()) #就先做到這裡
+        try:
+            response = client_socket.recv(1024).decode()# 接收來自客戶端的訊息
+            if response[0] == "R": #R字頭表回報身分編號
+                print(message_list[-1],'已連線')
+                client_IP=message_list[-1]
+                for i, entry in enumerate(pt_info_data):                    
+                    if entry['client_name'] == response[-1]:
+                        entry['client_IP']=str(client_address[0]) #加入pt_info_data中
+                    else:
+                        print('非合格客戶端:',client_address[0])
+                        
+                print(clients)
+                print(connected_clients)
     #    clients[client_address] = client_socket# 客戶端加入 clients 字典
         #clients[client_address] = True
     #    print(f"[連線中] {client_address} 發送身分識別要求...")
@@ -208,18 +221,11 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
                         break
                 if not found:
                     data.append({'name': new_name, 'time': [time.time()], 'weight': [new_weight]})
-            elif message_list[0] == "R": #R字頭表回報身分編號
-                print(message_list[-1],'已連線')
-                client_name=message_list[-1]
-                for i, entry in enumerate(pt_info_data):                    
-                    if entry['client_ID'] == client_name:
-                        entry['client_name']=client_name #
-                print(clients)
-                print(connected_clients)
+
             # 如果沒有傳入資料，目前設定以前一分鐘資料補上
             if time.localtime(time.time()).tm_sec == 29:#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]                
                 for j, entry in enumerate(pt_info_data): #檢查病人名單
-                    if pt_info_data[j]['client_name'] !="離線":#檢查每一位帳面上有連線的病人
+                    if pt_info_data[j]['client_IP'] !="離線":#檢查每一位帳面上有連線的病人
                         for k, entry in enumerate(data): #檢查每一位病人的個別資料
                             if data[k]['time'][-1] != (time.strftime('%Y-%m-%d, %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
                                 data[k]['time'].append(time.strftime('%Y-%m-%d, %H:%M')) #加上目前時間
@@ -227,7 +233,7 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
                 
         except:
             #print(f"[斷線] {client_address} 已中斷連線")
-            #del clients[client_address]
+            del clients[client_address]
             #if client_address in scanned_clients:
             #    del scanned_clients[client_address]
             client_socket.close()
@@ -242,7 +248,7 @@ logout_client_button.pack(side="right", padx=20, pady=10)
 
 # 建立1x9的按鈕矩陣
 for h in pt_info_data:
-    btn = ttk.Button(right_frame, text=f"{pt_info_data[h]['Bed']}\n{pt_info_data[h]['Info']}", command=lambda num=h: display_info(num))
+    btn = ttk.Button(right_frame, text=f"{pt_info_data[h]['Bed']}\n{pt_info_data[h]['pt_number']}", command=lambda num=h: display_info(num))
     btn.grid(row=h-1, column=0, pady=10)
 
 
