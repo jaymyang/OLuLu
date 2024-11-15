@@ -108,6 +108,7 @@ def logout_client():
 
 # 0. 伺服器主程式，初始化伺服器並接受客戶端連線
 def start_server():
+    print('start server')
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(("192.168.1.101", 8080))
     server.listen()
@@ -119,6 +120,7 @@ def start_server():
 
 # 1.定期向客戶端發送訊息收集資料（控時程式）
 def scan_clients():
+    print('scan clients')
     saved = False
     min_for_saving = [0, 10, 20, 30, 40, 50]
     while True:
@@ -148,6 +150,7 @@ def scan_clients():
 
 # 1-1. 存檔函數。目前暫時不打算存入原始資料list，除非實際使用後常常出現怪異數值
 def saving_data(saving_time, saving_weight, file_name):
+    print('saving sata')
     #if saving_weight:
         #hour_weight_change = calculate_weight_changes(0)#從0開始算，該函式回傳數值weight_sum在此會放進hour_weight_change。
         #time_marker = time.strftime('%Y-%m-%d, %H:%M')
@@ -166,6 +169,7 @@ def saving_data(saving_time, saving_weight, file_name):
 #print(a.keys())
 #print(str(a.keys()).__contains__('192.168.1.200'))
 def handle_client(client_socket, client_address): #client_address 是新聯上的；clients是既有列表
+    print('handle clients')
     #extising_client=False
     #if client_address[0] not in connected_clients:
     #    client_socket.send("9".encode())
@@ -183,22 +187,32 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
         # 對新連入的客戶端。發送指令 '9' 要求回報身分編號
     #if extising_client==False:
     client_socket.send("9".encode()) #就先做到這裡
-        try:
-            response = client_socket.recv(1024).decode()# 接收來自客戶端的訊息
-            if response[0] == "R": #R字頭表回報身分編號
-                print(message_list[-1],'已連線')
-                client_IP=message_list[-1]
-                for i, entry in enumerate(pt_info_data):                    
-                    if entry['client_name'] == response[-1]:
-                        entry['client_IP']=str(client_address[0]) #加入pt_info_data中
-                    else:
-                        print('非合格客戶端:',client_address[0])
+    print('client_socket.send("9".encode())')
+    try:
+        response = client_socket.recv(1024).decode()# 接收來自客戶端的訊息
+        response_list = response.split(",")
+        if response[0] == "R": #R字頭表回報身分編號
+            print(response_list[-1],'已連線')
+            client_IP=response[-1]
+            predefined_client= False
+            for i in pt_info_data:
+                if pt_info_data[i]['client_name'] == response_list[-1]:
+                    pt_info_data[i]['client_IP']=str(client_address[0]) #寫入pt_info_data中
+                    predefined_client= True
+                else:
+                    pass
+            if predefined_client== False:
+                    print('非合格客戶端:',client_address[0])
                         
-                print(clients)
-                print(connected_clients)
+            print(clients)
+            print(connected_clients)
     #    clients[client_address] = client_socket# 客戶端加入 clients 字典
         #clients[client_address] = True
     #    print(f"[連線中] {client_address} 發送身分識別要求...")
+    except (socket.error, KeyError):
+        print(f"客戶端 {client_address} 斷線")
+        with lock:
+            clients.pop(client_address, None)  # 安全移除
     while True:
         try:
             message = client_socket.recv(1024).decode()# 接收來自客戶端的訊息
