@@ -26,6 +26,8 @@ clients = {}
 # 所有連線的客戶端的集合
 connected_clients = set()
 
+button_dict = {}  # 用來存放按鈕物件的字典
+
 # data：用來放置收集到的數據的串列；內以字典方式記錄各客戶端（病歷號）的資料
 data = []
 # current_button_number用於記錄使用者點選的按鈕號碼，用以進行資料調度與顯示
@@ -76,15 +78,23 @@ def display_info(button_number):
 # 更新按鈕所顯示內容。本來打算依照是否連線改變色，現在覺得只要更動client_IP就可以
 # 有輸入病歷號時，要更動button中的病歷號
 # 連線時顯示client_name，離線則顯示離線
-def update_button_text(button_number):
-    for widget in right_frame.winfo_children():
-        #if widget.cget("text").startswith(pt_info_data[button_number]["Bed"]):
-        if pt_info_data[button_number]["pt_number"] != "請輸入病歷號":
-            client_id_text = pt_info_data[button_number]["pt_number"]
-        else:
-            client_id_text = "偵測器離線"
-        widget.config(text=f"{pt_info_data[button_number]['Bed']}\n{client_id_text}")
+#def update_button_text(button_number):
+#    for widget in right_frame.winfo_children():
+#        #if widget.cget("text").startswith(pt_info_data[button_number]["Bed"]):
+#        if pt_info_data[button_number]["pt_number"] != "請輸入病歷號":
+#            client_id_text = pt_info_data[button_number]["pt_number"]
+#        else:
+#            client_id_text = "偵測器離線"
+#        widget.config(text=f"{pt_info_data[button_number]['Bed']}\n{pt_info_data[button_number]['client_IP']}\n{client_id_text}")
         #break
+def update_button_text(button_number):
+    if pt_info_data[button_number]["pt_number"] != "請輸入病歷號":
+        client_id_text = pt_info_data[button_number]["pt_number"]
+    else:
+        client_id_text = "偵測器離線"
+    # 更新特定按鈕的文字
+    button_dict[button_number].config(text=f"{pt_info_data[button_number]['Bed']}\n{pt_info_data[button_number]['client_IP']}\n{client_id_text}")
+
 
 # 回到主畫面
 def return_to_main():
@@ -199,6 +209,7 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
                 if pt_info_data[i]['client_name'] == response_list[-1]:
                     pt_info_data[i]['client_IP']=str(client_address[0]) #寫入pt_info_data中
                     predefined_client= True
+                    update_button_text(i)
                 else:
                     pass
             if predefined_client== False:
@@ -264,6 +275,8 @@ logout_client_button.pack(side="right", padx=20, pady=10)
 for h in pt_info_data:
     btn = ttk.Button(right_frame, text=f"{pt_info_data[h]['Bed']}\n{pt_info_data[h]['pt_number']}", command=lambda num=h: display_info(num))
     btn.grid(row=h-1, column=0, pady=10)
+    button_dict[h] = btn  # 將按鈕存入字典
+
 
 
 
