@@ -1,3 +1,4 @@
+
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import socket
@@ -8,25 +9,25 @@ import numpy as np
 import statistics
 from datetime import datetime, timedelta
 
+
 #----------------------------------------------------------------------------------------------#
 # pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_name，pt_number為病歷號，client_name為各個客戶端的名字，需與各客戶端的arduino code對應.
 pt_info_data = {
-    1: {"Bed": "Bed01", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu01'},
-    2: {"Bed": "Bed02", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu02'},
-    3: {"Bed": "Bed03", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu03'},
-    4: {"Bed": "Bed05", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu05'},
-    5: {"Bed": "Bed06", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu06'},
-    6: {"Bed": "Bed07", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu07'},
-    7: {"Bed": "Bed08", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu08'},
-    8: {"Bed": "Bed17", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu17'},
-    9: {"Bed": "Bed18", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu18'},
+    0: {"Bed": "Bed01", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu01'},
+    1: {"Bed": "Bed02", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu02'},
+    2: {"Bed": "Bed03", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu03'},
+    3: {"Bed": "Bed05", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu05'},
+    4: {"Bed": "Bed06", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu06'},
+    5: {"Bed": "Bed07", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu07'},
+    6: {"Bed": "Bed08", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu08'},
+    7: {"Bed": "Bed17", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu17'},
+    8: {"Bed": "Bed18", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu18'},
 }
 # clients：連線的客戶端字典；用來控制與客戶端的溝通
 clients = {}
+lock = threading.Lock()
 # 所有連線的客戶端的集合
 connected_clients = set()
-
-button_dict = {}  # 用來存放按鈕物件的字典
 
 # data：用來放置收集到的數據的串列；內以字典方式記錄各客戶端（病歷號）的資料
 data = []
@@ -76,25 +77,17 @@ def display_info(button_number):
     
 
 # 更新按鈕所顯示內容。本來打算依照是否連線改變色，現在覺得只要更動client_IP就可以
-# 有輸入病歷號時，要更動button中的病歷號
-# 連線時顯示client_name，離線則顯示離線
-#def update_button_text(button_number):
-#    for widget in right_frame.winfo_children():
-#        #if widget.cget("text").startswith(pt_info_data[button_number]["Bed"]):
-#        if pt_info_data[button_number]["pt_number"] != "請輸入病歷號":
-#            client_id_text = pt_info_data[button_number]["pt_number"]
-#        else:
-#            client_id_text = "偵測器離線"
-#        widget.config(text=f"{pt_info_data[button_number]['Bed']}\n{pt_info_data[button_number]['client_IP']}\n{client_id_text}")
-        #break
+# 有輸入病歷號時，要更動button中的病歷號。連線時顯示client_IP，離線則顯示離線
 def update_button_text(button_number):
-    if pt_info_data[button_number]["pt_number"] != "請輸入病歷號":
-        client_id_text = pt_info_data[button_number]["pt_number"]
-    else:
-        client_id_text = "偵測器離線"
-    # 更新特定按鈕的文字
-    button_dict[button_number].config(text=f"{pt_info_data[button_number]['Bed']}\n{pt_info_data[button_number]['client_IP']}\n{client_id_text}")
+    widget=right_frame.winfo_children()
 
+    widget[button_number].config(text=f"{pt_info_data[button_number]['Bed']} \n {pt_info_data[button_number]['client_IP']} \n {pt_info_data[button_number]['pt_number']} ")
+        #if widget.cget("text").startswith(pt_info_data[button_number]["Bed"]):
+        #if pt_info_data[button_number]["pt_number"] == "請輸入病歷號":
+        #    client_id_text = pt_info_data[button_number]["pt_number"]
+        #else:
+        #    client_id_text = "偵測器離線"
+    
 
 # 回到主畫面
 def return_to_main():
@@ -121,40 +114,58 @@ def start_server():
     print('start server')
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(("192.168.1.101", 8080))
-    server.listen()
-    threading.Thread(target=scan_clients, daemon=True).start()# 啟動定時發訊息線程
+    server.listen(8)
+    threading.Thread(target=scan_clients, daemon=True).start()# 啟動定時發訊息
     # 持續接受新客戶端連線
     while True:
-        client_socket, client_address = server.accept()
-        threading.Thread(target=handle_client, args=(client_socket, client_address), daemon=True).start()
+        try:
+            client_socket, client_address = server.accept()
+            print(f"新客戶端連線: {client_address}")
+            with lock:
+                client_socket.send("9".encode()) #
+                print('client_socket.send("9".encode())')
+                clients[client_address] = client_socket
+            threading.Thread(target=handle_client, args=(client_socket, client_address), daemon=True).start()
+        except Exception as e:
+            print(f"伺服器錯誤: {e}")
+            break
+    server.close()
+    
 
 # 1.定期向客戶端發送訊息收集資料（控時程式）
+
 def scan_clients():
     print('scan clients')
     saved = False
     min_for_saving = [0, 10, 20, 30, 40, 50]
     while True:
         current_time = time.localtime(time.time())
-        if current_time.tm_sec == 59: # 每分鐘的59秒執行掃描
-            active_clients = list(clients.keys())
-            for client_address in active_clients:
-                client_socket = clients[client_address]
-                try:# 檢查客戶端是否仍然連線並發送訊息。這邊重點在於有沒有連線（沒有連線的，發訊息會出現錯誤或者凍結），所以不要用pt_info_data的資料去發
-                    client_socket.send("1".encode())
-                except:
-                    del clients[client_address]
-                    #if client_address in scanned_clients:
-                    #    del scanned_clients[client_address]
-                time.sleep(1)# 避免連續發送，等一秒
-            #有在思考加進斷線的客戶端就顯示為離線或是按鈕換顏色，連上了又換回正常顏色
+        if current_time.tm_sec == 1: # 每分鐘的01秒執行掃描
+            with lock:  # 確保對 clients 的操作是線程安全的
+                for client_address, client_socket in list(clients.items()):
+                    try:
+                        client_socket.send("1".encode())
+                        print(f'發送1 {client_address}')
+                    except (socket.error, BrokenPipeError) as e:
+                        print(f"無法向 {client_address} 發送訊息，錯誤: {e}")
+                        # 移除斷開的客戶端
+                        del clients[client_address]
+                        client_socket.close()
+                    time.sleep(0.1)  # 掃描頻率
+#有在思考加進斷線的客戶端就顯示為離線或是按鈕換顏色，連上了又換回正常顏色
+# 如果沒有傳入資料，目前設定以前一分鐘資料補上
+        if time.localtime(time.time()).tm_sec == 29 and len(data)>0 :#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]
+            add_missing_data()
+            print('29秒',data)
                 
-        if current_time.tm_min in min_for_saving and current_time.tm_sec == 30 and not saved:
-            for j, entry in enumerate(clients): #有連線的用戶
-                if clients[j]['chart_no'] !='':
-                    file_name=clients[j]['chart_no']+'.csv' #用戶的病歷號
-                    saving_data(data[j]['time'], data[j]['weight'], file_name)
+        if current_time.tm_min in min_for_saving and current_time.tm_sec == 35 and not saved:
+            for j in pt_info_data: #所有的客戶
+                if pt_info_data[j]['pt_number'] !='請輸入病歷號': #有連線的用戶
+                    file_name=pt_info_data[j]['pt_number']+'.csv' #用戶的病歷號當檔名
+                    print(data)
+                    saving_data(data[j]['time'], data[j]['weight'], file_name) #傳過去
                     saved= True
-        elif current_time.tm_sec == 31:
+        elif current_time.tm_sec == 37:
             saved = False #重設是否已存檔開關
         time.sleep(0.1) #休息一下1
 
@@ -179,29 +190,14 @@ def saving_data(saving_time, saving_weight, file_name):
 #print(a.keys())
 #print(str(a.keys()).__contains__('192.168.1.200'))
 def handle_client(client_socket, client_address): #client_address 是新聯上的；clients是既有列表
-    print('handle clients')
-    #extising_client=False
-    #if client_address[0] not in connected_clients:
-    #    client_socket.send("9".encode())
-    #    connected_clients.add(client_address[0])# 客戶端ip加入 clients 集合字典
-    #else:
-    #    pass
-    #for i , entry in enumerate(clients):
-    #    print(str(clients[i].keys()))
-    #    if client_address[0] in [ip[0] for ip in clients.keys()]: #client_address[0]就是單純的ip
-    #       extising_client=True
-    #       break
-    #    else:
-    #       pass 
     
-        # 對新連入的客戶端。發送指令 '9' 要求回報身分編號
+# 對新連入的客戶端。發送指令 '9' 要求回報身分編號
     #if extising_client==False:
-    client_socket.send("9".encode()) #就先做到這裡
-    print('client_socket.send("9".encode())')
+
     try:
         response = client_socket.recv(1024).decode()# 接收來自客戶端的訊息
         response_list = response.split(",")
-        if response[0] == "R": #R字頭表回報身分編號
+        if response_list[0] == "R": #R字頭表回報身分編號
             print(response_list[-1],'已連線')
             client_IP=response[-1]
             predefined_client= False
@@ -209,7 +205,7 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
                 if pt_info_data[i]['client_name'] == response_list[-1]:
                     pt_info_data[i]['client_IP']=str(client_address[0]) #寫入pt_info_data中
                     predefined_client= True
-                    update_button_text(i)
+                    update_button_text(i) 
                 else:
                     pass
             if predefined_client== False:
@@ -217,26 +213,27 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
                         
             print(clients)
             print(connected_clients)
-    #    clients[client_address] = client_socket# 客戶端加入 clients 字典
-        #clients[client_address] = True
-    #    print(f"[連線中] {client_address} 發送身分識別要求...")
     except (socket.error, KeyError):
         print(f"客戶端 {client_address} 斷線")
         with lock:
             clients.pop(client_address, None)  # 安全移除
     while True:
         try:
+            print('handle_clients')
             message = client_socket.recv(1024).decode()# 接收來自客戶端的訊息
+            print(message)
             if not message:
                 break# 若無訊息則斷開連線；此點會不會就是頻繁斷線的問題所在？
-            message_list = message.split(",")
+            message_list = message.split(",") #將傳入字串，以逗點分成lis
             if message_list[0] == "A"  and 'LuLu' in message_list[-1]:  # 確認是完整的訊息
-                message_list.pop(0)  #去掉第一個（識別字元A）
-                new_name = message_list.pop(-1)
-                if np.max(raw_wt_list) - np.min(raw_wt_list) <= 5: #來自02版，如果收到的資料變化不超過5，直接取平均；但這會不會是造成現行版本數字有些微波動的主因？是否直接取中位數就好？
-                    new_weight = round(np.mean(raw_wt_list))
-                else:                                               #不然就取中位數
-                    new_weight = round(statistics.median(raw_wt_list))
+                new_name =message_list[-1]
+                raw_wt_list=list(map(int,message_list[1:-2]))#去頭尾
+                print(raw_wt_list)
+                if len(raw_wt_list)>1:
+                    if np.max(raw_wt_list) - np.min(raw_wt_list) <= 5: #來自02版，如果收到的資料變化不超過5，直接取平均；但這會不會是造成現行版本數字有些微波動的主因？是否直接取中位數就好？
+                        new_weight = round(np.mean(raw_wt_list))
+                    else:                                               #不然就取中位數
+                        new_weight = round(statistics.median(raw_wt_list))
                 found = False
                 for i, entry in enumerate(data):
                     if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
@@ -246,25 +243,33 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
                         break
                 if not found:
                     data.append({'name': new_name, 'time': [time.time()], 'weight': [new_weight]})
+                print(data)
 
-            # 如果沒有傳入資料，目前設定以前一分鐘資料補上
-            if time.localtime(time.time()).tm_sec == 29:#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]                
-                for j, entry in enumerate(pt_info_data): #檢查病人名單
-                    if pt_info_data[j]['client_IP'] !="離線":#檢查每一位帳面上有連線的病人
-                        for k, entry in enumerate(data): #檢查每一位病人的個別資料
-                            if data[k]['time'][-1] != (time.strftime('%Y-%m-%d, %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
-                                data[k]['time'].append(time.strftime('%Y-%m-%d, %H:%M')) #加上目前時間
-                                data[k]['weight'].append(data[k]['weight'][-1])  #加上既有串列裡最後一個
-                
-        except:
-            #print(f"[斷線] {client_address} 已中斷連線")
-            del clients[client_address]
-            #if client_address in scanned_clients:
-            #    del scanned_clients[client_address]
+        except (socket.timeout, socket.error) as e:
+            print(f"客戶端 {client_address} 回應超時")
             client_socket.close()
-            time.sleep(0.1)
-            break
+            
+        # 嘗試清理並重新連接
+            with lock:
+                clients.pop(client_address, None)
+            return
+        #except:
+        #    print(f"[斷線] {client_address} 已中斷連線")
+        #    del clients[client_address]
+        #    client_socket.close()
+        #    time.sleep(0.1)
+        #    break
 
+
+
+def add_missing_data():
+    for j in pt_info_data: #檢查病人名單
+        if pt_info_data[j]['client_IP'] !="離線":#檢查每一位帳面上有連線的病人
+            for k, entry in enumerate(data): #檢查每一位病人的個別資料
+                if data[k]['time'][-1] != (time.strftime('%Y-%m-%d, %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
+                    data[k]['time'].append(time.strftime('%Y-%m-%d, %H:%M')) #加上目前時間
+                    data[k]['weight'].append(data[k]['weight'][-1])  #加上既有串列裡最後一個
+                            
 # 主畫面按鈕
 displayok_button = tk.Button(left_frame, text="OK", command=return_to_main, font=("Arial", 12))
 displayok_button.pack(side="left", padx=20, pady=10)
@@ -273,13 +278,11 @@ logout_client_button.pack(side="right", padx=20, pady=10)
 
 # 建立1x9的按鈕矩陣
 for h in pt_info_data:
-    btn = ttk.Button(right_frame, text=f"{pt_info_data[h]['Bed']}\n{pt_info_data[h]['pt_number']}", command=lambda num=h: display_info(num))
-    btn.grid(row=h-1, column=0, pady=10)
-    button_dict[h] = btn  # 將按鈕存入字典
-
-
-
+    btn = ttk.Button(right_frame, text=f"{pt_info_data[h]['Bed']}\n{pt_info_data[h]['client_IP']}\n{pt_info_data[h]['pt_number']}", command=lambda num=h: display_info(num)) #指定點選的數字
+    btn.grid(row=h, column=0, pady=10)
 
 # 啟動伺服器
+lock = threading.Lock()
 threading.Thread(target=start_server, daemon=True).start()
+
 root.mainloop()
