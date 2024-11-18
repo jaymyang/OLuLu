@@ -156,14 +156,15 @@ def scan_clients():
 # 如果沒有傳入資料，目前設定以前一分鐘資料補上
         if time.localtime(time.time()).tm_sec == 29 and len(data)>0 :#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]
             add_missing_data()
-            print('29秒',data)
+            print(time.localtime(time.time()),data)
                 
         if current_time.tm_min in min_for_saving and current_time.tm_sec == 35 and not saved:
             for j in pt_info_data: #所有的客戶
                 if pt_info_data[j]['pt_number'] !='請輸入病歷號': #有連線的用戶
                     file_name=pt_info_data[j]['pt_number']+'.csv' #用戶的病歷號當檔名
-                    print(data)
-                    saving_data(data[j]['time'], data[j]['weight'], file_name) #傳過去
+                    #print(data)
+                    if len(data)>0:
+                        saving_data(data[j]['time'], data[j]['weight'], file_name) #傳過去
                     saved= True
         elif current_time.tm_sec == 37:
             saved = False #重設是否已存檔開關
@@ -234,16 +235,19 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
                         new_weight = round(np.mean(raw_wt_list))
                     else:                                               #不然就取中位數
                         new_weight = round(statistics.median(raw_wt_list))
-                found = False
+                append_data = False
+                found= False
                 for i, entry in enumerate(data):
                     if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
-                        data[i]['time'].append(time.strftime('%Y-%m-%d, %H:%M'))
+                        data[i]['time'].append(time.strftime('%Y-%m-%d, %H:%M'))#如找到，就直接附加
                         data[i]['weight'].append(new_weight)
-                        found = True
+                        found_data = True
+                        append_data = True
                         break
                 if not found:
-                    data.append({'name': new_name, 'time': [time.time()], 'weight': [new_weight]})
-                print(data)
+                    data.append({'name': new_name, 'time': [time.time()], 'weight': [new_weight]})#沒找到，建立新的字典內容
+                    append_data = True
+                
 
         except (socket.timeout, socket.error) as e:
             print(f"客戶端 {client_address} 回應超時")
