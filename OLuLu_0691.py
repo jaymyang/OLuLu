@@ -235,15 +235,17 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
                         new_weight = round(np.mean(raw_wt_list))
                     else:                                               #不然就取中位數
                         new_weight = round(statistics.median(raw_wt_list))
-                append_data = False
+                #append_data = False
                 found= False
                 for i, entry in enumerate(data):
-                    if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
-                        data[i]['time'].append(time.strftime('%Y-%m-%d, %H:%M'))#如找到，就直接附加
+                    if entry['name'] == new_name and data[i]['time']!=time.strftime('%Y-%m-%d, %H:%M'): #data字典中的name就是例如LuLu01等的ID，且本時間尚未加入新數值
+                        data[i]['time'].append(time.strftime('%Y-%m-%d, %H:%M'))#附加
                         data[i]['weight'].append(new_weight)
-                        found_data = True
-                        append_data = True
-                        break
+                        found = True
+                        #append_data = True
+                        break #理論上存好就要跳出迴圈了
+                    else:
+                        pass
                 if not found:
                     data.append({'name': new_name, 'time': [time.time()], 'weight': [new_weight]})#沒找到，建立新的字典內容
                     append_data = True
