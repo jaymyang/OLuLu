@@ -33,6 +33,8 @@ connected_clients = set()
 data = []
 # current_button_number用於記錄使用者點選的按鈕號碼，用以進行資料調度與顯示
 current_button_number = None
+
+
 #----------------------------------------------------------------------------------------------#
 
 # 初始化主畫面
@@ -190,53 +192,35 @@ def saving_data(saving_time, saving_weight, file_name):
 #print(a.keys())
 #print(str(a.keys()).__contains__('192.168.1.200'))
 def handle_client(client_socket, client_address): #client_address 是新聯上的；clients是既有列表
+    message_buffer=''
+    message_part1=''
+
     
 # 對新連入的客戶端。發送指令 '9' 要求回報身分編號
     #if extising_client==False:
     while True:
         try:
-            print('handle_clients')
+            #print('handle_clients')
             message = client_socket.recv(1024).decode()# 接收來自客戶端的訊息
+            message.strip()
+            #print('message', message)
             if not message:
                 break# 若無訊息則斷開連線；此點會不會就是頻繁斷線的問題所在？
-            message_list = message.split(",") #將傳入字串，以逗點分成list
-            if message_list[0] == "A"  and 'LuLu' in message_list[-1]:  # 確認是完整的訊息
-                message_list.pop(0)  #去掉第一個（識別字元A）
-                new_name =message_list[-1]
-                raw_wt_list=list(map(int,message_list[1:-2]))#去頭尾
-                if len(raw_wt_list)>1:
-                    if np.max(raw_wt_list) - np.min(raw_wt_list) <= 5: #來自02版，如果收到的資料變化不超過5，直接取平均；但這會不會是造成現行版本數字有些微波動的主因？是否直接取中位數就好？
-                        new_weight = round(np.mean(raw_wt_list))
-                    else:                                               #不然就取中位數
-                        new_weight = round(statistics.median(raw_wt_list))
-                found = False
-                for i, entry in enumerate(data):
-                    if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
-                        data[i]['time'].append(time.strftime('%Y-%m-%d, %H:%M'))
-                        data[i]['weight'].append(new_weight)
-                        found = True
-                        break
-                if not found:
-                    data.append({'name': new_name, 'time': [time.time()], 'weight': [new_weight]})
-                    break
-                print(data)
-            elif message_list[0] == "R": #R字頭表回報身分編號
-                print(message_list[-1],'已連線')
-                client_IP=message_list[-1]
-                predefined_client= False
-                for i in pt_info_data:
-                    if pt_info_data[i]['client_name'] == message_list[-1]:
-                        pt_info_data[i]['client_IP']=str(client_address[0]) #寫入pt_info_data中
-                        predefined_client= True
-                        update_button_text(i) 
-                    else:
-                        pass
-                if predefined_client== False:
-                    print('非合格客戶端:',client_address[0])
-                        
-                print(clients)
-                print(connected_clients)
-     
+            message_buffer=message_buffer+message #把新傳來的字串加上去
+            message_split=message_buffer.index('LuLu')+6            #接下來要分字串
+            message_part1=message_buffer[:message_split]
+            message_buffer=message_buffer[message_split:]
+            print(message_part1,message_buffer)
+            
+
+            message_list = message_part1.split(",") #將傳入字串，以逗點分成list
+            print('message_list',message_list)
+            if message_list[0] == "R": #R字頭表回報身分編號
+                message_R(message_list,client_address)                
+            elif message_list[0] == "A"  and 'LuLu' in message_list[-1]:  # 確認
+                message_A(message_list)
+            message_buffer=''
+   
 
         except (socket.timeout, socket.error) as e:
             print(f"客戶端 {client_address} 回應超時")
@@ -251,7 +235,49 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
         #    client_socket.close()
         #    time.sleep(0.1)
         #    break
+#-------------------------------------------------------
+def message_R(message_list,client_address):
+    print(message_list[-1],'已連線')
+    client_IP=message_list[-1]
+    global pt_info_data
+    predefined_client= False
+    for i in pt_info_data:
+        if pt_info_data[i]['client_name'] == message_list[-1]:
+            pt_info_data[i]['client_IP']=str(client_address[0]) #寫入pt_info_data中
+            predefined_client= True
+            update_button_text(i)
+        else:
+            pass
+    if predefined_client== False:
+        print('非合格客戶端:',client_address[0])                      
+    #print(clients)
+    #print(connected_clients)
 
+
+def message_A(message_list):
+    message_list.pop(0)  #去掉第一個（識別字元A）
+    new_name =message_list[-1]
+    global data
+    print('new_name',new_name)
+    raw_wt_list=list(map(int,message_list[1:-2]))#去頭尾
+    new_weight=None
+    if len(raw_wt_list)>0:
+        if np.max(raw_wt_list) - np.min(raw_wt_list) <= 5: #來自02版，如果收到的資料變化不超過5，直接取平均；但這會不會是造成現行版本數字有些微波動的主因？是否直接取中位數就好？
+            new_weight = round(np.mean(raw_wt_list))
+        else:                                               #不然就取中位數
+            new_weight = round(statistics.median(raw_wt_list))
+                #with lock:        
+    found = False
+    for i, entry in enumerate(data):
+        if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
+            data[i]['time'].append(time.strftime('%Y-%m-%d, %H:%M'))
+            data[i]['weight'].append(new_weight)
+            found = True
+            break
+    if not found:
+        data.append({'name': new_name, 'time': [time.time()], 'weight': [new_weight]})
+        #break
+    print(data)
 
 
 def add_missing_data():
