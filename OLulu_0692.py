@@ -1,3 +1,5 @@
+#按下登出無法登出
+#尚未整合繪圖
 
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
@@ -158,22 +160,22 @@ def scan_clients():
 # 如果沒有傳入資料，目前設定以前一分鐘資料補上
         if time.localtime(time.time()).tm_sec == 29 and len(data)>0 :#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]
             add_missing_data()
-            print('29秒',data)
+            #print('29秒',data)
                 
         if current_time.tm_min in min_for_saving and current_time.tm_sec == 35 and not saved:
             for j in pt_info_data: #所有的客戶
                 if pt_info_data[j]['pt_number'] !='請輸入病歷號': #有連線的用戶
                     file_name=pt_info_data[j]['pt_number']+'.csv' #用戶的病歷號當檔名
-                    print(data)
+                    #print(data)
                     saving_data(data[j]['time'], data[j]['weight'], file_name) #傳過去
                     saved= True
-        elif current_time.tm_sec == 37:
+        else:
             saved = False #重設是否已存檔開關
         time.sleep(0.1) #休息一下1
 
 # 1-1. 存檔函數。目前暫時不打算存入原始資料list，除非實際使用後常常出現怪異數值
 def saving_data(saving_time, saving_weight, file_name):
-    print('saving sata')
+    print('saving sata',data)
     #if saving_weight:
         #hour_weight_change = calculate_weight_changes(0)#從0開始算，該函式回傳數值weight_sum在此會放進hour_weight_change。
         #time_marker = time.strftime('%Y-%m-%d, %H:%M')
@@ -304,3 +306,4 @@ lock = threading.Lock()
 threading.Thread(target=start_server, daemon=True).start()
 
 root.mainloop()
+
