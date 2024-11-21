@@ -1,5 +1,5 @@
-#按下登出無法登出
-#尚未整合繪圖
+#按下登出無法登出，決定十分鐘存檔一次但沒有去除data裡已存檔的資料
+#尚未整合繪圖；既然有補缺資料了，要不要先簡單一點，先用回溯60分鐘到某時間，取該時段來繪圖？
 
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
