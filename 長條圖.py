@@ -23,8 +23,21 @@ data = [{'time': ['2024/11/08 12:50', '2024/11/08 12:51', '2024/11/08 12:52',
 temp_time = data[0]['time']
 temp_weight = data[0]['weight']
 #確定時間有搭上。計畫是要拿-60個資料，但可能會有疏漏。所以應該先計算data是否超過60項。
+#再來用time delta並以迴圈，以每分鐘為單位，建立串列，用來跟time[j]比較
+#start_time = time.strftime('%Y-%m-%d, %H:%M')
+#應該是這個time_list = [datetime.strptime(start_time, '%Y-%m-%d %H:%M') + timedelta(minutes=-i) for i in range(60)]（往前推60個）
+#for i in time_list:
+#  formatted_time_list[i]=time_list[i].strftime('%Y-%m-%d %H:%M') #建立符合格式的參考時間串列
+#接著要有60組X跟Y的數據；在這之前要判斷data[i]是否有超過60組數據。
+#for i in range(-1,-61,-1):
+#  if data[i]['time']==formatted_time_list[i]:
+#    y.append(data[i]['weight'])
+#  else:
+#    y.append(0)
+
+
 #如少於60項，-60分至有資料的時間，x軸用空白，y軸用0
-#如超過60項，由-60開始，先確認該項是否=time[j]。如否，x軸跳過，y用0。如是，y用weight[j]
+#如超過60項，由-60開始，確認時間參考陣列質是否=time[j]。如否，y用0。如是，y用weight[j]
 
 for i in range(19):
     if formatted_time_list[i] in temp_time:
