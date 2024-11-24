@@ -29,6 +29,15 @@ temp_weight = data[0]['weight']
 #for i in time_list:
 #  formatted_time_list[i]=time_list[i].strftime('%Y-%m-%d %H:%M') #建立符合格式的參考時間串列
 #接著要有60組X跟Y的數據；在這之前要判斷data[i]是否有超過60組數據。
+if len(data[button_number][weight]<60:
+       for i in range(1,60-len(data[button_number][weight]),1):
+         y.append(0)
+       for i in range(1,len(data[button_number][weight]),1):
+         if data[i]['time']==formatted_time_list[i]:
+           append(data[i]['weight'])
+  else:
+         y.append(0)
+else:  
 #for i in range(-1,-61,-1):
 #  if data[i]['time']==formatted_time_list[i]:
 #    y.append(data[i]['weight'])
