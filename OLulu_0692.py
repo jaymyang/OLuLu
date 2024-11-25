@@ -112,35 +112,32 @@ def display_info(button_number):
             y.append(0)
 #底下這個是左半的文字
     dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n client_IP: {client_IP}\n pt_number: {info_on_button}\n Client ID: {client_id}")#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
+    print('y',y)
 # 清除舊的長條圖
     canvas.delete("all")
 
-    # 繪製長條圖
-    for i in range(len(y)):
-        x0 = 25 + i * 10
-        y0 = 525 - y[i] * 10
-        x1 = 25 + i * 10
-        y1 = 525
-        canvas.create_line(x0, y0, x1, y1, width=10, fill="orange")
-
-    # 繪製 X 軸和 Y 軸
+    # X 軸和 Y 軸
     canvas.create_line(30, 525, 30, 0, fill="black", width=1)  # X 軸
     canvas.create_line(30, 525, 635, 525, fill="black", width=1)  # Y 軸
-
-    # 繪製 X 軸刻度
+    # X 軸刻度
     for i in range(0, 61, 10):
         canvas.create_line(35 + i * 10, 525, 35 + i * 10, 530, fill="black")
         canvas.create_text(35 + i * 10, 530, text=i - 60, anchor=tk.N)
-
-    # 繪製 Y 軸刻度
+    # Y 軸刻度
     for j in range(0, 5):
         canvas.create_line(25, j * 100 + 25, 30, j * 100 + 25, fill="black")
         canvas.create_text(25, j * 100 + 25, text=(5 - j) * 100, anchor=tk.E)
-
     # X 軸和 Y 軸的標籤
     canvas.create_text(615, 530, text="時間", anchor=tk.N)
     canvas.create_text(15, 45, text="公克", anchor=tk.S)
-
+    # 繪製長條圖
+    for i in range(len(y)):
+        x0 = 635- i * 8
+        y0 = 525
+        x1 = 635- i * 8
+        y1 = 525 - y[i] 
+        canvas.create_line(x0, y0, x1, y1, width=8, fill="orange")
+        
         #接著要有60組X跟Y的數據；在這之前要判斷data[i]是否有超過60組數據。
 #    if len(data[button_number]['weight'])<60:
 #        for i in range(1,60-len(data[button_number]['weight']),1):
@@ -227,7 +224,8 @@ def start_server():
 # 1.定期向客戶端發送訊息收集資料（控時程式）
 
 def scan_clients():
-    print('scan clients')
+    #print('scan clients')
+    global current_button_number
     saved = False
     min_for_saving = [0, 10, 20, 30, 40, 50]
     while True:
@@ -244,6 +242,8 @@ def scan_clients():
                         del clients[client_address]
                         client_socket.close()
                     time.sleep(1)  # 掃描頻率
+        if current_time.tm_sec == 25: # 每分鐘的25
+            display_info(current_button_number)
 #有在思考加進斷線的客戶端就顯示為離線或是按鈕換顏色，連上了又換回正常顏色
 # 如果沒有傳入資料，目前設定以前一分鐘資料補上
         if time.localtime(time.time()).tm_sec == 29 and len(data)>0 :#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]
