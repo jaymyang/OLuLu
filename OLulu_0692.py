@@ -1,4 +1,23 @@
+#由於可能有多個地方匯出是，但不能停機，所以打算要放進很多個exception。因為打開csv時存檔失敗，接下來整個就不再接受新的資料輸入，畫不出圖來，但是帳面上還在運作。
+#使用通用 Exception 捕捉錯誤：
+#    如果需要捕捉所有錯誤而不退出程式，可以使用 except Exception as e。
+#    務必在 except 塊中加入適當的記錄或處理方式（如 print 或 logging），以便日後檢查問題。
+#打算放進去的：
+#    except Exception as e:
+#        print(f"發生錯誤：{e}")
+#以下的finally是恩對連線問題的
+#    finally:
+#        client_socket.close()
 
+#在關鍵區域添加 try-except：
+#    將易於出錯的程式碼放入單獨的 try 區塊中，這樣即使發生錯誤，其他部分的程式碼也能繼續執行。
+
+#使用 finally 保證資源釋放：
+
+#    在結束時關閉連線或清理資源，無論是否出現錯誤。
+
+
+    
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import socket
@@ -54,108 +73,97 @@ left_frame.pack(side="left", fill="both", expand=1)
 # 添加 Canvas 畫布
 canvas = tk.Canvas(left_frame, width=640, height=600, bg="white")
 canvas.pack(padx=10, pady=10)
-
+#按鈕
+displayok_button = tk.Button(left_frame, text="OK", command=return_to_main, font=("Arial", 12))
+displayok_button.pack(side="left", padx=20, pady=650)
+logout_client_button = tk.Button(left_frame, text="登出", command=logout_client, font=("Arial", 12))
+logout_client_button.pack(side="right", padx=20, pady=650)
 # 顯示點選的資料
-dataDisplay_text = tk.Label(left_frame, text="Click a button to see details", bg="white", font=("Arial", 14))
-dataDisplay_text.pack(pady=50)
+dataDisplay_text = tk.Label(left_frame, text="Click a button to see details", bg="white", font=("Arial", 12))
+dataDisplay_text.pack(pady=610)
 
 # 右半畫面，病人床位選擇區
 right_frame = tk.Frame(root, width=256, height=768)
 right_frame.pack(side="right", fill="both", expand=0)
 
 
-
-
 # 位於右半畫面的選取床位主控面板
+# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_name，pt_number為病歷號，client_name為各個客戶端的名字，需與各客戶端的arduino code對應.
+# 1: {"Bed": "Bed01", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu01'},
+
 def display_info(button_number):
     global current_button_number
     y=[]
-    current_button_number = button_number
-    info_on_button = pt_info_data[button_number]["pt_number"] #設定為所選取的button
-    
-# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_name，pt_number為病歷號，client_name為各個客戶端的名字，需與各客戶端的arduino code對應.
-#    1: {"Bed": "Bed01", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu01'},
-    
-    if info_on_button == "請輸入病歷號":
-        patient_id = simpledialog.askstring("輸入病歷號", f"請輸入 {pt_info_data[button_number]['Bed']} 的病歷號:")
-        if patient_id:  #輸入完成
-            pt_info_data[button_number]["pt_number"] = patient_id #將字典的info設為所輸入的病歷號
-            update_button_text(button_number) #更新按鈕
+    try:
+        current_button_number = button_number
+        info_on_button = pt_info_data[button_number]["pt_number"] #設定為所選取的button
+        if info_on_button == "請輸入病歷號":
+            patient_id = simpledialog.askstring("輸入病歷號", f"請輸入 {pt_info_data[button_number]['Bed']} 的病歷號:")
+            if patient_id:  #輸入完成
+                pt_info_data[button_number]["pt_number"] = patient_id #將字典的info設為所輸入的病歷號
+                update_button_text(button_number) #更新按鈕
             
     #以下是從pt_info_data中抓取資料
-    bed = pt_info_data[button_number]["Bed"]
-    client_IP = pt_info_data[button_number]["client_IP"]
-    info_on_button = pt_info_data[button_number]["pt_number"]
-    #if pt_info_data[button_number]["client_name"] in clients:
-    client_id = pt_info_data[button_number]["client_name"] 
-    #else:
-    #    pass
-            
+        bed = pt_info_data[button_number]["Bed"]
+        client_IP = pt_info_data[button_number]["client_IP"]
+        info_on_button = pt_info_data[button_number]["pt_number"]
+        client_id = pt_info_data[button_number]["client_name"] 
+
+           
     #確定時間有搭上。計畫是要拿-60個資料，但可能會有疏漏。所以應該先計算data是否超過60項。
     #再來用time delta並以迴圈，以每分鐘為單位，建立串列，用來跟time[j]比較
     # 取得當前時間，格式化為指定格式
-    start_time = time.strftime('%Y-%m-%d %H:%M')
+        start_time = time.strftime('%Y-%m-%d %H:%M')
     # 建立時間串列，往前推 60 分鐘
-    time_list = [datetime.strptime(start_time, '%Y-%m-%d %H:%M') - timedelta(minutes=i) for i in range(60)]
+        time_list = [datetime.strptime(start_time, '%Y-%m-%d %H:%M') - timedelta(minutes=i) for i in range(60)]
     # 格式化時間串列
-    formatted_time_list = [time.strftime('%Y-%m-%d %H:%M') for time in time_list]
-    #for i in time_list:
-    #    formatted_time_list[i]=time_list[i].strftime('%Y-%m-%d %H:%M') #建立符合格式的參考時間串列
-    for j in range (-60,-1,1):
-        try:
-            if formatted_time_list[j] in data[button_number]['time']: #在資料中找到相對應時間
-                index=data[button_number]['time'].index(formatted_time_list[j])
-                y.append(data[button_number]['weight'][index]) #y=該時間的重量
-            else:
+        formatted_time_list = [time.strftime('%Y-%m-%d %H:%M') for time in time_list]
+        for j in range (-60,-1,1):
+            try:
+                if formatted_time_list[j] in data[button_number]['time']: #在資料中找到相對應時間
+                    index=data[button_number]['time'].index(formatted_time_list[j])
+                    y.append(data[button_number]['weight'][index]) #y=該時間的重量
+                else:
+                    y.append(0)
+            except IndexError: #超出範圍
                 y.append(0)
-        except IndexError: #超出範圍
-            y.append(0)
 #底下這個是左半的文字
-    dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n client_IP: {client_IP}\n pt_number: {info_on_button}\n Client ID: {client_id}")#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
-    print('y',y)
-# 清除舊的長條圖
-    canvas.delete("all")
+        dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n client_IP: {client_IP}\n pt_number: {info_on_button}\n Client ID: {client_id}")#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
 
+# 清除舊的長條圖
+        canvas.delete("all")
+        if np.max(y) >500:
+            scale=2
+            color_code='blue'
+        else:
+            scale=1
+            color_code='orange'
+            
     # X 軸和 Y 軸
-    canvas.create_line(30, 525, 30, 0, fill="black", width=1)  # X 軸
-    canvas.create_line(30, 525, 635, 525, fill="black", width=1)  # Y 軸
+        canvas.create_line(30, 525, 30, 0, fill="black", width=1)  # X 軸
+        canvas.create_line(30, 525, 635, 525, fill="black", width=1)  # Y 軸
     # X 軸刻度
-    for i in range(0, 61, 10):
-        canvas.create_line(35 + i * 10, 525, 35 + i * 10, 530, fill="black")
-        canvas.create_text(35 + i * 10, 530, text=i - 60, anchor=tk.N)
+        for i in range(0, 61, 10):
+            canvas.create_line(35 + i * 10, 525, 35 + i * 10, 530, fill="black")
+            canvas.create_text(35 + i * 10, 530, text=i - 60, anchor=tk.N)
     # Y 軸刻度
-    for j in range(0, 5):
-        canvas.create_line(25, j * 100 + 25, 30, j * 100 + 25, fill="black")
-        canvas.create_text(25, j * 100 + 25, text=(5 - j) * 100, anchor=tk.E)
+        for j in range(0, 5):
+            canvas.create_line(25, j * 100 + 25, 30, j * 100 + 25, fill="black")
+            canvas.create_text(25, j * 100 + 25, text=(5 - j) * 100*scale, anchor=tk.E)
     # X 軸和 Y 軸的標籤
-    canvas.create_text(615, 530, text="時間", anchor=tk.N)
-    canvas.create_text(15, 45, text="公克", anchor=tk.S)
+        canvas.create_text(615, 530, text="時間", anchor=tk.N)
+        canvas.create_text(15, 45, text="公克", anchor=tk.S)
     # 繪製長條圖
-    for i in range(len(y)):
-        x0 = 635- i * 8
-        y0 = 525
-        x1 = 635- i * 8
-        y1 = 525 - y[i] 
-        canvas.create_line(x0, y0, x1, y1, width=8, fill="orange")
+        for i in range(len(y)):
+            x0 = 635- i * 8
+            y0 = 525
+            x1 = 635- i * 8
+            y1 = round(525 - y[i]/scale)
+            canvas.create_line(x0, y0, x1, y1, width=8, fill=color_code)
         
-        #接著要有60組X跟Y的數據；在這之前要判斷data[i]是否有超過60組數據。
-#    if len(data[button_number]['weight'])<60:
-#        for i in range(1,60-len(data[button_number]['weight']),1):
-#            y.append(0)
-#        for i in range(1,len(data[button_number]['weight']),1):
-#            if data[i]['time']==formatted_time_list[i]:
-#                append(data[i]['weight'])
-#            else:
-#                y.append(0)
-#    else:
-#        for i in range(-1,-61,-1):
-#            if data[i]['time']==formatted_time_list[i]:
-#                y.append(data[i]['weight'])
-#            else:
-#                y.append(0)
-#所形成的串列可能要翻轉，或是乾yj脆從最後一個往前抓？
-#如少於60項，-60分至有資料的時間，x軸用空白，y軸用0
-#如超過60項，由-60開始，確認時間參考陣列質是否=time[j]。如否，y用0。如是，y用weight[j]
+    except Exception as e:
+        print(f"發生錯誤：{e}")
+#還沒有做到的：顯示8小時的資料
                          
     
 
@@ -262,28 +270,42 @@ def scan_clients():
                     #複雜的方法，保留最近十分鐘的資料，把先前（10-20分鐘）的資料送去存。但這在最後登出病人時要記得把剩下的資料存進v去
                     #這種方法幫忙不大，除非我在電腦記憶體裡存60筆，但這又會碰到就是希望10分就存檔一次以減少意外發生造成的影響。
 #折衷方式：不管如何，10分鐘存檔一次。為了減少硬碟讀取，將data裡存放每個病人60分鐘的資料，但每十分鐘就將最新的資料抓去存檔。並在每小時01分將data擷取最新60分鐘資料留存在記憶體內
-                    saved= True
-                    data
-        else:
+            saved= True #所有的都已經跑過了，saved設為True，以免在同一秒內又再來一次
+        elif current_time.tm_sec == 36:
             saved = False #重設是否已存檔開關
         time.sleep(0.1) #休息一下1
 
 # 1-1. 存檔函數。目前暫時不打算存入原始資料list，除非實際使用後常常出現怪異數值
 def saving_data(saving_time, saving_weight, file_name):
-    print('saving data',data)
-    print('saving_weight')
-    #if saving_weight:
-        #hour_weight_change = calculate_weight_changes(0)#從0開始算，該函式回傳數值weight_sum在此會放進hour_weight_change。
-        #time_marker = time.strftime('%Y-%m-%d %H:%M')
+    try:
+        print('saving data', saving_time)
+        print('saving_weight', saving_weight)
+        # 檢查是否有值
+        if not saving_time or not saving_weight:
+            raise ValueError("輸入的 saving_time 或 saving_weight 為空")
+        # 檢查 saving_time 和 saving_weight 長度是否相同。先前是都沒有這個問題啦，但萬一有會很麻煩
+        if len(saving_time) != len(saving_weight):
+            raise ValueError("saving_time 和 saving_weight 項數不符")
+        # 整理要寫入的資料
+        file_time = saving_time
+        file_weight = [w for t, w in zip(saving_time, saving_weight)]  # 把兩個串列裡相同位置的元素配在一起
+        
+        # 寫入檔案
+        with open(file_name, 'a', newline='') as csvfile:
+            wt = csv.writer(csvfile)
+            for save_time, save_weight in zip(file_time, file_weight):
+                wt.writerow([save_time, save_weight])
+            print(f"檔案 {file_name} 存檔完成")
+    
+    except ValueError as ve:
+        print(f"資料處理錯誤: {ve}")
+   
+    except IOError as ioe:
+        print(f"檔案操作錯誤: {ioe}")
+    
+    except Exception as e:
+        print(f"未知錯誤: {e}")
 
-    file_time = saving_time
-    file_weight = [w for t, w in zip(saving_time, saving_weight) ] #把兩個串列裡相同位置的元素配在一起
-    with open(file_name, 'a', newline='') as csvfile:
-        wt = csv.writer(csvfile)
-        #print('file_weight:'+file_weight)
-        for save_time, save_weight in zip(file_time, file_weight):
-            wt.writerow([save_time, save_weight])#, save_raw])
-        #print(file_name+'存檔完成')
 
 
 #-------------------------------------------------------
@@ -338,7 +360,7 @@ def handle_client(client_socket, client_address): #client_address 是新聯上�
 #-------------------------------------------------------
 def message_R(message_list,client_address):
     print(message_list[-1],'已連線')
-    client_IP=message_list[-1]
+    #client_IP=client_address[0]
     global pt_info_data
     predefined_client= False
     for i in pt_info_data:
@@ -388,11 +410,8 @@ def add_missing_data():
                     data[k]['time'].append(time.strftime('%Y-%m-%d %H:%M')) #加上目前時間
                     data[k]['weight'].append(data[k]['weight'][-1])  #加上既有串列裡最後一個
                             
-# 主畫面按鈕
-displayok_button = tk.Button(left_frame, text="OK", command=return_to_main, font=("Arial", 12))
-displayok_button.pack(side="left", padx=20, pady=10)
-logout_client_button = tk.Button(left_frame, text="登出", command=logout_client, font=("Arial", 12))
-logout_client_button.pack(side="right", padx=20, pady=10)
+# ----------------------------主畫面------------------------------------------
+
 
 # 建立1x9的按鈕矩陣
 for h in pt_info_data:
