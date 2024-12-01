@@ -84,7 +84,7 @@ def display_info(button_number):
 def bargraph(switch_1_8,y):
     if not y:
         print("無法繪製圖形：資料為空") #這是為了曾經出現過的狀況，在chell關閉又開啟數次後畫不出圖來，經查仍在接收資料，但y是空的。先這樣試試看。
-        y=one_eight_switch(switch_1_8):
+        y=one_eight_switch(switch_1_8)
         return
     
     if switch_1_8==1:
@@ -110,8 +110,8 @@ def bargraph(switch_1_8,y):
             canvas.create_line(x0, y0, x1, y1, width=scale_x, fill=color_code)
 
     # X 軸和 Y 軸
-        canvas.create_line(35, 525, 30, 0, fill="black", width=1)  # y 軸
-        canvas.create_line(35, 525, 750, 525, fill="black", width=1)  # x 軸
+        canvas.create_line(35, 525, 35, 0, fill="black", width=1)  # y 軸
+        canvas.create_line(35, 525, 755, 525, fill="black", width=1)  # x 軸
     # X 軸刻度
         for i in range(0, 61, 10):
             canvas.create_line(35 + i * 12, 525, 35 + i * 12, 530, fill="black")
