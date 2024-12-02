@@ -118,11 +118,11 @@ def bargraph(switch_1_8,y):
             canvas.create_text(35 + i * 12, 530, text=i - 60, anchor=tk.N)
     # Y 軸刻度
         for j in range(0, 5):
-            canvas.create_line(25, j * 100 + 25, 30, j * 100 + 25, fill="black")
-            canvas.create_text(25, j * 100 + 25, text=(5 - j) * 100*scale_y, anchor=tk.E)
+            canvas.create_line(30, j * 100 + 25, 35, j * 100 + 25, fill="black")
+            canvas.create_text(30, j * 100 + 25, text=(5 - j) * 100*scale_y, anchor=tk.E)
     # X 軸和 Y 軸的標籤
-        canvas.create_text(725, 530, text="時間", anchor=tk.N)
-        canvas.create_text(15, 45, text="公克", anchor=tk.S)
+        canvas.create_text(395, 538, text="(min)", anchor=tk.N)
+        canvas.create_text(15, 270, text="(g)", anchor=tk.S)
       
     except Exception as e:
         print(f"發生錯誤：{e}")
