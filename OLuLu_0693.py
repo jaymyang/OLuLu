@@ -1,3 +1,4 @@
+#待解決問題：關閉視窗時要把所有的thread關閉；整合0.2版的初估與預測功能。
 #由於可能有多個地方匯出是，但不能停機，所以打算要放進很多個exception。因為打開csv時存檔失敗，接下來整個就不再接受新的資料輸入，畫不出圖來，但是帳面上還在運作。
 #使用通用 Exception 捕捉錯誤：
 #    如果需要捕捉所有錯誤而不退出程式，可以使用 except Exception as e。
@@ -27,6 +28,8 @@ import csv
 import numpy as np
 import statistics
 from datetime import datetime, timedelta
+from PIL import Image, ImageTk
+
 formatted_time_list = []
 x=[]
 y=[]
@@ -61,8 +64,17 @@ def display_info(button_number):
     y=[]
     one_eight_selection=1
     try:
+        # 重置先前選取的按鈕顏色
+        if current_button_number is not None:
+            previous_button = right_frame.winfo_children()[current_button_number]
+            previous_button.config(bg="SystemButtonFace", fg="black")  
         current_button_number = button_number
-        info_on_button = pt_info_data[button_number]["pt_number"] #設定為所選取的button
+        # 設定目前選取的按鈕為橘底白字
+        selected_button = right_frame.winfo_children()[button_number]
+        selected_button.config(bg="orange", fg="white")
+        #設定為所選取的button
+        info_on_button = pt_info_data[button_number]["pt_number"] 
+
         if info_on_button == "請輸入病歷號":
             patient_id = simpledialog.askstring("輸入病歷號", f"請輸入 {pt_info_data[button_number]['Bed']} 的病歷號:")
             if patient_id:  #輸入完成
@@ -75,7 +87,7 @@ def display_info(button_number):
         info_on_button = pt_info_data[button_number]["pt_number"]
         client_id = pt_info_data[button_number]["client_name"] 
 
-        dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n client_IP: {client_IP}\n pt_number: {info_on_button}\n Client ID: {client_id}")#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
+        dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n client_IP: {client_IP}\n pt_number: {info_on_button}\n Client ID: {client_id}",font=("Arial", 12))#這是主要有問題的地方，本來是可以不要用的，因為要直接顯示長條圖
         y_data_points=one_eight_switch(one_eight_selection) #呼叫切換與整理資料，預設值為1
         bargraph(one_eight_selection,y_data_points) #利用回傳資料，單純畫圖
     except Exception as e:
@@ -115,7 +127,10 @@ def bargraph(switch_1_8,y):
     # X 軸刻度
         for i in range(0, 61, 10):
             canvas.create_line(35 + i * 12, 525, 35 + i * 12, 530, fill="black")
-            canvas.create_text(35 + i * 12, 530, text=i - 60, anchor=tk.N)
+            if switch_1_8==1:
+                canvas.create_text(35 + i * 12, 530, text=i - 60, anchor=tk.N)
+            else:
+                canvas.create_text(35 + i * 12, 530, text=(i - 60)*8, anchor=tk.N)
     # Y 軸刻度
         for j in range(0, 5):
             canvas.create_line(30, j * 100 + 25, 35, j * 100 + 25, fill="black")
@@ -240,9 +255,14 @@ def on_closing():
         except Exception as e:
             messagebox.showerror("存檔錯誤", f"存檔時發生錯誤：{e}")
         finally:
-            root.destroy()  # 確保程式退出
+            if root.winfo_exists():  # 確保 root 存在
+                root.destroy()  # 確保程式退出
     else:
         print("取消關閉視窗")
+
+
+
+
 
 
 ######以下是副thread 2, 控時######################################################
@@ -432,14 +452,22 @@ def message_A(message_list):
     raw_wt_list=list(map(int,message_list[1:-2]))#去頭尾
     new_weight=None
     if len(raw_wt_list)>0:
+        raw_wt_list=discard_outlier(raw_wt_list)
+    if len(raw_wt_list)>0:
         if np.max(raw_wt_list) - np.min(raw_wt_list) <= 5: #來自02版，如果收到的資料變化不超過5，直接取平均；但這會不會是造成現行版本數字有些微波動的主因？是否直接取中位數就好？
             new_weight = round(np.mean(raw_wt_list))
         else:                                               #不然就取中位數
-            new_weight = round(statistics.median(raw_wt_list))      
+            new_weight = round(statistics.median(raw_wt_list))
+    else:
+        new_weight=-9999 #此為異常數值
     found = False
     for i, entry in enumerate(data):
         if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
             data[i]['time'].append(time.strftime('%Y-%m-%d %H:%M'))
+            if new_weight==-9999 and len(data[i]['weight'])>0: #表示有異常數值出現，不取                
+                new_weight=data[i]['weight'][-1] #沿用上一個數字
+            elif new_weight==-9999 and len(data[i]['weight'])==0:
+                new_weight=0
             data[i]['weight'].append(new_weight)
             found = True
             break
@@ -448,6 +476,17 @@ def message_A(message_list):
         #break
     #print(data)
 
+def discard_outlier(wt_list): #假如信任秤，應該也可以取眾數就好
+    for i in range(0,len(wt_list)-1):
+        if wt_list[i] > 1000 or wt_list[i]<-1000:
+            del wt_list[i]
+    return wt_list
+
+    #wt_array = np.array(wt_list) #轉換為array
+    #mean = np.mean(wt_array)
+    #std_dev = np.std(wt_array)
+    #outlier_wt = wt_array[(wt_array >= mean - 0.5*std_dev) & (wt_array <= mean + 0.5*std_dev)] #上下限為0.5個標準差；留下在此範圍內的元素
+    #return outlier_wt.tolist()
 
 #--------------------------------------------主畫面-----------------------------------------------#
 
@@ -465,17 +504,26 @@ left_frame.pack(side="left", fill="both", expand=1)
 # 添加 Canvas 畫布
 canvas = tk.Canvas(left_frame, width=768, height=600, bg="white")
 canvas.grid(column=0,row=0,columnspan=3,padx=20,pady=0)
+
+# 載入初始圖片
+try:
+    init_image = Image.open("Copyright-1.png")  # 替換為你的初始圖片路徑
+    init_image_tk = ImageTk.PhotoImage(init_image)
+    canvas.create_image(268, 105, image=init_image_tk, anchor="nw")
+except Exception as e:
+    print(f"載入初始圖片時發生錯誤：{e}")
+    
 #按鈕
 switch_button = tk.Button(left_frame, text="切換1或8小時資料", command=toggle_switch, font=("Arial", 12))
 #switch_button = tk.Button(left_frame, text="OK",  font=("Arial", 12))
 switch_button.grid(column=0,row=1)
 logout_client_button = tk.Button(left_frame, text="登出病人", command=logout_client, font=("Arial", 12))
 #logout_client_button = tk.Button(left_frame, text="登出", font=("Arial", 12))
-
 logout_client_button.grid(column=2,row=1)
 # 顯示點選的資料
-dataDisplay_text = tk.Label(left_frame, text="Click a button to see details", bg="white", font=("Arial", 12))
+dataDisplay_text = tk.Label(left_frame, text="點選右方按鈕註冊病人", bg="white", font=("Arial", 18))
 dataDisplay_text.grid(column=1,row=1)
+
 
 # 右半畫面，病人床位選擇區
 right_frame = tk.Frame(root, width=256, height=768)
@@ -483,7 +531,7 @@ right_frame.pack(side="right", fill="both", expand=0)
 
 # 建立1x9的按鈕矩陣
 for h in pt_info_data:
-    btn = ttk.Button(right_frame, text=f"{pt_info_data[h]['Bed']}\n{pt_info_data[h]['client_IP']}\n{pt_info_data[h]['pt_number']}", command=lambda num=h: display_info(num)) #指定點選的數字
+    btn = tk.Button(right_frame,text=f"{pt_info_data[h]['Bed']}\n{pt_info_data[h]['client_IP']}\n{pt_info_data[h]['pt_number']}", command=lambda num=h: display_info(num)) #指定點選的數字
     btn.grid(row=h, column=0, pady=10)
 
 # 啟動伺服器
