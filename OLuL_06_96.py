@@ -1,10 +1,15 @@
-#在登出病人後，按鈕仍保持原來病人的病歷號，要再次輸入以後才會顯示為新的病歷號。
+#現在登出以後已經可以跳回起始畫面。
+#問題：
+#1.假如按了按鈕，沒有輸入病歷號，不會呈現起始畫面（而是空白畫面）
+#2.按了按鈕也輸入病歷號，但是client是離線的，不只不會呈現起始畫面（而是空白畫面），接下來存檔還會出現list index out of range，然後連帶其他的clients也停止收訊。最後關閉程式存檔時也會出現錯誤。
+
+
 #    如果需要捕捉所有錯誤而不退出程式，可以使用 except Exception as e。
 #    務必在 except 塊中加入適當的記錄或處理方式（如 print 或 logging），以便日後檢查問題。
 #打算放進去的：
 #    except Exception as e:
 #        print(f"發生錯誤：{e}")
-#以下的finally是恩對連線問題的
+#以下的finally是針對連線問題的
 #    finally:
 #        client_socket.close()
 
@@ -12,7 +17,6 @@
 #    將易於出錯的程式碼放入單獨的 try 區塊中，這樣即使發生錯誤，其他部分的程式碼也能繼續執行。
 
 #使用 finally 保證資源釋放：
-
 #    在結束時關閉連線或清理資源，無論是否出現錯誤。
 
 
@@ -58,11 +62,14 @@ switch_1_8 = 1
 displayed=False
 #測試用來關閉程式的開關
 closing=False
+#暫存前一個按鈕值暫定為0
+previous_selected=0
 ######以下是主thread 介面######################################################
 #不知道為什麼，按下一個按鈕以後這個display info似乎跑了八次
-def display_info(button_number):
+def display_info(button_number,displayed):
     global current_button_number
-    global displayed
+
+    #global displayed
     y=[]
     one_eight_selection=1
     
@@ -72,7 +79,8 @@ def display_info(button_number):
             previous_button = right_frame.winfo_children()[current_button_number]
             previous_button.config(style="TButton")  # 恢復普通樣式
 
-        current_button_number = button_number
+        previous_selected = current_button_number #將原先的選擇值暫存為previous_selected
+        current_button_number = button_number #將原先的選擇值更新為button_number
         # 設定目前選取的按鈕變色
         selected_button = right_frame.winfo_children()[button_number]
         selected_button.config(style="Selected.TButton")
@@ -84,51 +92,56 @@ def display_info(button_number):
             if patient_id: #輸入完成
                 pt_info_data[button_number]["pt_number"] = patient_id#將字典的info設為所輸入的病歷號
                 update_button_text(button_number)#更新按鈕
-#以下是從pt_info_data中抓取資料
+  
+            else: #假如沒有輸入，將selected設回灰色，將先前的設回黃色
+                selected_button = right_frame.winfo_children()[current_button_number]
+                selected_button.config(style="TButton")  # 恢復普通樣式                
+                current_button_number=previous_selected #假如沒有輸入病歷號而是按了cancel，就把current_button_number設回先前的值
+                button_number=current_button_number
+                previous_button = right_frame.winfo_children()[current_button_number]
+                previous_button.config(style="Selected.TButton")  # 恢復普通樣式              
+                pass
+        #從pt_info_data中抓取資料
         bed = pt_info_data[button_number]["Bed"]
         client_IP = pt_info_data[button_number]["client_IP"]
         info_on_button = pt_info_data[button_number]["pt_number"]
         client_id = pt_info_data[button_number]["client_name"]
-        #來把這個改裝成顯示估計值
 
-        dataDisplay_text.config(
-            text=f"Button {button_number}\n Bed: {bed}\n client_IP: {client_IP}\n pt_number: {info_on_button}\n Client ID: {client_id}"
-        )
-        y_data_points=one_eight_switch(one_eight_selection)[0] #呼叫切換與整理資料，預設toggle值為1
-        bargraph(one_eight_selection,y_data_points) #利用回傳資料，單純畫圖
+        dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n client_IP: {client_IP}\n pt_number: {info_on_button}\n Client ID: {client_id}") #顯示選擇之資訊
+        if data[button_number]["weight"] !=[]:
+            y_data_points=one_eight_switch(one_eight_selection)[0] #切換1/8小時與準備繪圖資料（預設toggle值為1）
+            bargraph(one_eight_selection,y_data_points) #以回傳資料畫圖
+        else:
+            pass
 
+        #以下估計回歸
         trend_points=one_eight_switch(one_eight_selection)[1] #計算回歸用資料
-        if len(trend_points)>20: #超過20個非0資料點才會計算
+        if len(trend_points)>20: #超過20個非0資料點再計算
             trend=[]
-            trend=trend_prediction(trend_points)
+            trend=trend_prediction(trend_points) #算回歸係數
             dataDisplay_text.config(
             text=f"Button {button_number}\n Bed: {bed}\n pt_number: {info_on_button}\n 過去10分鐘重量變化: {trend[0]} \n 過去十分鐘趨勢: {trend[1]}"
         )
         displayed=True
+        #previous_selected=current_button_number #假如按了cancel，因為已經是先前的值了，沒差；假如能順利跑到這，那就更新為新
+        return displayed
     except Exception as e:
-        print(f"發生錯誤：{e}")
-
+        print(f"line 129發生錯誤：{e}")
 
 #以下製造繪圖所用的資料點
-def one_eight_switch(switch_1_8): 
+def one_eight_switch(switch_1_8): #第一步：準備要畫圖的資料點
     global current_button_number
     y = []  # 清空舊資料
     trend_y=[] #用來計算回歸的
     start_time = datetime.now()
+    
     #製造出顯示一小時或八小時資料時所需要的時間點陣列
     if switch_1_8==1:
-        formatted_time_list = [
-        (start_time - timedelta(minutes=i)).strftime('%Y-%m-%d %H:%M') 
-        for i in range(60)
-    ]
-        
+        formatted_time_list = [(start_time - timedelta(minutes=i)).strftime('%Y-%m-%d %H:%M') for i in range(60)]        
     else:
-        formatted_time_list = [
-        (start_time - timedelta(minutes=i)).strftime('%Y-%m-%d %H:%M') 
-        for i in range(0,480,2)
-    ]
+        formatted_time_list = [(start_time - timedelta(minutes=i)).strftime('%Y-%m-%d %H:%M') for i in range(0,480,2)]
 
-    # 讀取記憶體中的資料
+    # 讀取記憶體中的資料。如果是暫時登出又再連上，可在每分鐘如發現顯示陣列內資料個數不滿60筆時，就嘗試讀檔來補足顯示用資料。這部份現在還沒做好。要這樣做的話，可以把讀取資料的部分寫成函式）
     if current_button_number is not None: #當然，要有選擇到某位病人才行
         try:
             for time_point in formatted_time_list:
@@ -137,26 +150,39 @@ def one_eight_switch(switch_1_8):
                     y.append(data[current_button_number]['weight'][index])
                     trend_y.append(data[current_button_number]['weight'][index])
                 else:
-                    y.append(0)
+                    y.append(0)                
         except Exception as e:
+            canvas.delete("all")
+            canvas.create_image(268, 105, image=init_image_tk, anchor="nw") #理論上在這裡應該會先清空然後顯示起始畫面
+            y=one_eight_switch(switch_1_8)
             print(f"記憶體內的資料處理錯誤：{e}")
+        if len(data[current_button_number]['time'])<60:
+            getfiledata(y,formatted_time_list)
+        else:
+            pass           
 
     # 如果是 8 小時模式，讀取檔案資料並補上在前面被當成0的部分
     if switch_1_8 == 8:
-        try:
-            file_name = f"{pt_info_data[current_button_number]['pt_number']}.csv"
-            with open(file_name, 'r', newline='') as csvfile:
-                reader = csv.reader(csvfile)
-                csv_data = {row[0]: float(row[1]) for row in reader}  # 時間:重量
-            for i, time_point in enumerate(formatted_time_list):
-                # 只補上 y[i] == 0（記憶體內無資料）
-                if y[i] == 0 and time_point in csv_data:
-                    y[i] = csv_data[time_point]
-        except FileNotFoundError:
-            print(f"檔案 {file_name} 不存在，無法讀取歷史資料。")
-        except Exception as e:
-            print(f"讀取檔案錯誤：{e}")
+        getfiledata(y,formatted_time_list)
     return y,trend_y
+
+        
+def getfiledata(y,formatted_time_list):
+    global current_button_number
+    try:
+        file_name = f"{pt_info_data[current_button_number]['pt_number']}.csv"
+        with open(file_name, 'r', newline='') as csvfile:
+            reader = csv.reader(csvfile)
+            csv_data = {row[0]: float(row[1]) for row in reader}  # 時間:重量
+        for i, time_point in enumerate(formatted_time_list):
+            # 只補上 y[i] == 0（記憶體內無資料）
+            if y[i] == 0 and time_point in csv_data:
+                y[i] = csv_data[time_point]
+    except FileNotFoundError:
+        print(f"檔案 {file_name} 不存在，無法讀取歷史資料。")
+    except Exception as e:
+        print(f"讀取檔案錯誤：{e}")
+    return y
 
 
         
@@ -178,6 +204,8 @@ def toggle_switch():
 def bargraph(switch_1_8,y):
     if not y:
         print("目前無資料可繪製圖形。") #這是為了曾經出現過的狀況，在shell關閉又開啟數次後畫不出圖來，經查仍在接收資料，但y是空的。先這樣試試看。
+        #canvas.delete("all")
+        canvas.create_image(268, 105, image=init_image_tk, anchor="nw")#理論上在這裡應該會先清空然後顯示起始畫面
         y=one_eight_switch(switch_1_8)
         return
     
@@ -221,7 +249,7 @@ def bargraph(switch_1_8,y):
         canvas.create_text(15, 270, text="(g)", anchor=tk.S)
       
     except Exception as e:
-        print(f"繪製長條圖時發生錯誤：{e}")
+        print(f"line239繪製長條圖時發生錯誤：{e}")
 
 
 
@@ -256,7 +284,7 @@ def logout_client():
             logout_file_name=pt_info_data[current_button_number]['pt_number']+'.csv' #用戶的病歷號當檔名
             
             pt_info_data[current_button_number]["pt_number"] = "請輸入病歷號"
-            pt_info_data[current_button_number]["client_name"] = "登出" #這邊的用意是只有登出病人，並非要一併斷線。但問題是收進來的資料還是被存進daa－－理論上登出後，就算繼續發送起始訊號，也不應該將回報資料放進data
+            #pt_info_data[current_button_number]["client_name"] = "登出" #這邊的用意是只有登出病人，並非要一併斷線。但問題是收進來的資料還是被存進data－－理論上登出後，就算繼續發送起始訊號，也不應該將回報資料放進data
             #應執行存檔，存檔完成清空data中本項
             #print(current_button_number)
             #print(pt_info_data[current_button_number])
@@ -265,12 +293,14 @@ def logout_client():
                 if data[current_button_number] !=[]:
                     remained_item_n=-(time.localtime(time.time()).tm_min % 10)
                     saving_data(data[current_button_number]['time'][remained_item_n:], data[current_button_number]['weight'][remained_item_n:], logout_file_name) #傳過去
-                    del data[current_button_number]
+                    data[current_button_number]=[]
                 else:
                     pass
         
             update_button_text(current_button_number)
             print('已登出並存檔',data)
+            canvas.delete("all")
+            canvas.create_image(268, 105, image=init_image_tk, anchor="nw")
             return_to_main()
     else:
         messagebox.showinfo("注意", "請先選擇病床再登出")
@@ -286,18 +316,15 @@ def on_closing():
                 if pt_info_data[j]['pt_number'] != '請輸入病歷號':
                     file_name = f"{pt_info_data[j]['pt_number']}.csv"
                     saving_data(data[j]['time'][remained_item_n:], data[j]['weight'][remained_item_n:], file_name)
-            print("所有資料已存檔，程式即將關閉。")
+            print("所有資料已存檔，感謝您的使用。")
             closing=True
         except Exception as e:
-            messagebox.showerror("存檔錯誤", f"存檔時發生錯誤：{e}")
+            messagebox.showerror("line309存檔錯誤", f"存檔時發生錯誤：{e}")
         finally:
             if root.winfo_exists():  # 確保 root 存在
                 root.destroy()  # 確保程式退出
     else:
         print("取消關閉視窗")
-
-
-
         
 #----------------------尚未整合進去的局部估計與趨勢預測-----------------------------------------------------
 # 單次的異常值\丟棄功能，在021版已有發展，但現在尚未納入。Function to calculate weight changes#需要偵測重量突減以及異常大量
@@ -311,22 +338,23 @@ def trend_prediction(weight_FLUID): #使用trend_points
         weight_max=weight_FLUID[start_element] #先將最大值設成起始值
         weight_min=weight_FLUID[start_element] #先將最小值設成起始值
         weight_recent=weight_FLUID[start_element:] #工作用串列
-        small_volume=np.max(weight_FLUID[start_element])-np.min(weight_FLUID[start_element]) #這邊先計算是否為small volume
+        small_volume=np.max(weight_recent)-np.min(weight_recent) #這邊先計算是否為small volume
+        print(weight_recent,small_volume)
 
         for i in range(1,len(weight_recent)-1,1): 
             if abs(weight_recent[i]-weight_recent[i-1])<20: #假設相差小於20克是合理的
                 if weight_recent[i]>weight_max: 
                     weight_max=weight_recent[i] #假如目前這個比較大，就把weight_max數值設為目前這個
                 elif weight_recent[i]<weight_max: 
-                    weight_min=weight_recent[i] #假如目前這個比較大，就把weight_max數值設為目前這個
+                    weight_min=weight_recent[i] #假如目前這個比較小，就把weight_min數值設為目前這個
                 else:
                     pass
             else:
                 weight_sum=weight_sum+weight_max-weight_min #本階段結束，將本階段重量差加上原重量差，視為尿量
                 weight_max=weight_recent[i] #重設
                 weight_min=weight_recent[i] #重設
-                   
-        if small_volume<10:#這裡是預設在一個尿量波動很小的範圍的時候，直接用最大值減最小值來估計就好。不管每5分鐘或每小時，都用10gm
+        weight_sum=weight_sum+weight_max-weight_min 
+        if small_volume < 5:#這裡是預設在一個尿量波動很小的範圍的時候，直接用最大值減最小值來估計就好。不管每5分鐘或每小時，都用10gm
             weight_Sum=small_volume
         trend_recent=basic_regression(weight_FLUID[-10:])
         trend_ago=basic_regression(weight_FLUID[-20:-10])
@@ -335,7 +363,7 @@ def trend_prediction(weight_FLUID): #使用trend_points
         else:
             trend='增加或穩定'
     
-    print(trend)
+    print(weight_sum,trend)
     return str(weight_sum), trend#0是重量，1是趨勢
     
 # Function to perform basic regression
@@ -356,11 +384,12 @@ def scan_clients():
     #print('scan clients')
     global current_button_number
     global data
-    global displayed
+    #global displayed
     global closing
     saved = False
     min_for_saving = [0, 10, 20, 30, 40, 50]
     while True:
+        displayed=False
         current_time = time.localtime(time.time())
         if closing==True:
             break
@@ -379,36 +408,39 @@ def scan_clients():
                 time.sleep(1)  # 每一秒鐘依次向名單中的客戶端發命令。記得要在message_R那邊加上「切斷不在名單中的客戶端」功能
                
     # 每分鐘的25秒補足資料缺口 # 如果沒有傳入資料，目前設定以前一分鐘資料補上
-        if time.localtime(time.time()).tm_sec == 25:#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.list[-1]
+        if time.localtime(time.time()).tm_sec == 25 and len(data)>0 :#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.既有串列裡最後一個
             for j in pt_info_data: #檢查病人名單
-                if pt_info_data[j]['client_IP'] !="離線" and len(data) >0:# 檢查每一位帳面上有連線的病人
-                    for k, entry in enumerate(data): #檢查每一位病人的個別資料
-                        if data[k]['time'][-1] != (time.strftime('%Y-%m-%d %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
-                            data[k]['time'].append(time.strftime('%Y-%m-%d %H:%M')) #加上目前時間
-                            data[k]['weight'].append(data[k]['weight'][-1])  #加上既有串列裡最後一個
-                
+                if pt_info_data[j]['client_IP'] !="離線" and len(data[j]['weight']) >0:# 檢查每一位帳面上有連線的病人
+                    #for k, entry in enumerate(data): #檢查每一位病人的個別資料
+                    if data[j]['time'][-1] != (time.strftime('%Y-%m-%d %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
+                        data[j]['time'].append(time.strftime('%Y-%m-%d %H:%M')) #加上目前時間
+                        data[j]['weight'].append(data[j]['weight'][-1])  #加上既有串列裡最後一個
+                    else:
+                        pass
+                else:
+                    pass                
 
          # 每分鐘的31秒更新顯示；這個要不要寫在主線？
         if current_time.tm_sec == 31 and len(data) >0:
             if not displayed:
-                display_info(current_button_number)
-                displayed=True
+                displayed=display_info(current_button_number,displayed)
             else:
-                #print(displayed)
                 time.sleep (0.1)
                 pass
         elif current_time.tm_sec == 32:
-            displayed=False
+            displayed=False #重設回尚未顯示
 
     # 每10分鐘的35秒存檔，36秒重設存檔開關             
         if current_time.tm_min in min_for_saving and current_time.tm_sec == 35 and not saved:
             for j in pt_info_data: #所有的客戶
-                if pt_info_data[j]['pt_number'] !='請輸入病歷號': #有連線的用戶
+                if pt_info_data[j]['pt_number'] !='請輸入病歷號' and pt_info_data[j]['client_IP'] !='離線': #有連線的用戶；這邊沒有考慮到有key病歷號但是離線的
                     file_name=pt_info_data[j]['pt_number']+'.csv' #用戶的病歷號當檔名
                     if data!=[]:
                         saving_data(data[j]['time'][-10:], data[j]['weight'][-10:], file_name) #把最後10項傳過去，但這要注意如果目前data未滿十項呢？
                     else:
                         pass
+                else:
+                    pass
                     #data[j]['time']=[] #先用笨一點的方法，就是每十分鐘存檔一次並清空，避免data膨脹
                     #data[j]['weight']=[] #這種方法不一定比較差，是因為下面內存10分鐘的方法，還是得開檔剩下50分鐘的資料除非我在電腦裡存60分的資料。
                     
@@ -554,6 +586,7 @@ def message_A(message_list):
     global data
     new_weight=None
     raw_wt_list=[]
+    print(raw_wt_list)
     message_list.pop(0)  #去掉第一個（識別字元A）
     new_name =message_list[-1] #表示這資料來自於哪個客戶端
     raw_data_list=list(map(int,message_list[1:-2]))#去頭尾且轉整數
@@ -639,13 +672,10 @@ for i, info in pt_info_data.items():
     button = ttk.Button(
         right_frame,
         text=f"{info['Bed']} \n {info['client_IP']} \n {info['pt_number']}",
-        command=lambda i=i: display_info(i),
+        command=lambda i=i: display_info(i,False),
         style="TButton"
     )
     button.pack(fill=tk.X,pady=2)
-
-
-
 
 
 # 啟動伺服器
