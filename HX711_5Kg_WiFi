@@ -1,0 +1,67 @@
+#include "HX711.h"
+#include <WiFi.h>
+#include <WiFiClient.h>
+
+const char* ssid = "Rose-mesh";
+const char* password = "75521926";
+const char* host = "192.168.1.101";
+const uint16_t port = 8080;
+
+char python_order;
+String Weight = "A";
+String temp_Weight = "";
+String ID = "LuLu01";
+int i;
+
+WiFiClient client;
+
+void setup() {
+  Serial.begin(9600);      
+  delay(10);
+  Serial.println("Connecting to WiFi...");
+ 
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("WiFi connected");
+
+  Init_Hx711();       
+  Get_Maopi();    
+  delay(3000);
+  Get_Maopi();    
+}
+
+void loop() {
+  if (!client.connected()) {
+    Serial.println("Reconnecting...");
+    if (!client.connect(host, port)) {
+      Serial.println("Reconnection failed");
+      delay(5000);  
+      return;
+    }
+    Serial.println("Reconnected to server");
+  }
+
+  if (client.available()) {
+    python_order = client.read();
+    if (python_order == '1') {
+      Weight = "A";
+      for (i = 1; i <= 10; i++) {
+        temp_Weight = Get_Weight();
+        Weight = Weight+ "," + temp_Weight;
+        delay(500);
+      }
+      Weight = Weight+ "," + ID;    
+      client.print(Weight);
+      python_order = 'E';
+    } else if (python_order == '9') {
+      Weight = "R," + ID;
+      client.print(Weight);
+      python_order = 'E';
+    } else {
+      Serial.println("Invalid command received");
+    }
+  }
+}
