@@ -1,3 +1,29 @@
+#按登出時的error messaga:
+Exception in thread Thread-3 (handle_client):
+Traceback (most recent call last):
+  File "D:\Lib\threading.py", line 1052, in _bootstrap_inner
+    self.run()
+  File "D:\Lib\threading.py", line 989, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\Olulu_06_96.py", line 547, in handle_client
+    message_A(message_list)
+  File "D:\Olulu_06_96.py", line 609, in message_A
+    if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
+       ~~~~~^^^^^^^^
+TypeError: list indices must be integers or slices, not str
+Exception in thread Thread-2 (scan_clients):
+Traceback (most recent call last):
+  File "D:\Lib\threading.py", line 1052, in _bootstrap_inner
+    self.run()
+  File "D:\Lib\threading.py", line 989, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\Olulu_06_96.py", line 413, in scan_clients
+    if pt_info_data[j]['client_IP'] !="離線" and len(data[j]['weight']) >0:# 檢查每一位帳面上有連線的病人
+                                                   ~~~~~~~^^^^^^^^^^
+TypeError: list indices must be integers or slices, not str
+
+
+
 #現在登出以後已經可以跳回起始畫面。
 #問題：
 #1.假如按了按鈕，沒有輸入病歷號，不會呈現起始畫面（而是空白畫面）
@@ -65,7 +91,7 @@ closing=False
 #暫存前一個按鈕值暫定為0
 previous_selected=0
 ######以下是主thread 介面######################################################
-#不知道為什麼，按下一個按鈕以後這個display info似乎跑了八次
+#不知道為什麼，這個display info跑了8次
 def display_info(button_number,displayed):
     global current_button_number
 
@@ -409,7 +435,7 @@ def scan_clients():
                
     # 每分鐘的25秒補足資料缺口 # 如果沒有傳入資料，目前設定以前一分鐘資料補上
         if time.localtime(time.time()).tm_sec == 25 and len(data)>0 :#遍歷字典裡各病人的time，如無符合目前時間的資料，就append.既有串列裡最後一個
-            for j in pt_info_data: #檢查病人名單
+            for j in range(len(pt_info_data)): #檢查病人名單
                 if pt_info_data[j]['client_IP'] !="離線" and len(data[j]['weight']) >0:# 檢查每一位帳面上有連線的病人
                     #for k, entry in enumerate(data): #檢查每一位病人的個別資料
                     if data[j]['time'][-1] != (time.strftime('%Y-%m-%d %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
