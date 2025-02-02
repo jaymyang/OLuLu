@@ -406,7 +406,7 @@ def scan_clients():
     #print('scan clients')
     global current_button_number
     global data
-    #global displayed
+    global unassigned_clients
     global closing
     saved = False
     min_for_saving = [0, 10, 20, 30, 40, 50]
@@ -415,6 +415,8 @@ def scan_clients():
         current_time = time.localtime(time.time())
         if closing==True:
             break
+	if len(unassigned_clients)>0:
+	    displayed=display_info(current_button_number,displayed)
      # 每分鐘的01秒執行掃描    
         if current_time.tm_sec == 1: # 每分鐘的01秒執行掃描
             #with lock:  # 確保對 clients 的操作是線程安全的；這個我想保留
@@ -598,7 +600,7 @@ def message_R(message_list,client_address):
 	    else:
 	        pass #現在反過來，如果已經登錄於pt_info_data中，表示已經註冊過了，跳過
         if assigned_client == False:
-	    unassigned_client.append(message_list[-1])
+	    unassigned_clients.append(message_list[-1])
         else:
 	    pass
     else:
