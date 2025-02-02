@@ -1,26 +1,26 @@
 #按登出時的error messaga:
-Exception in thread Thread-3 (handle_client):
-Traceback (most recent call last):
-  File "D:\Lib\threading.py", line 1052, in _bootstrap_inner
-    self.run()
-  File "D:\Lib\threading.py", line 989, in run
-    self._target(*self._args, **self._kwargs)
-  File "D:\Olulu_06_96.py", line 547, in handle_client
-    message_A(message_list)
-  File "D:\Olulu_06_96.py", line 609, in message_A
-    if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
-       ~~~~~^^^^^^^^
-TypeError: list indices must be integers or slices, not str
-Exception in thread Thread-2 (scan_clients):
-Traceback (most recent call last):
-  File "D:\Lib\threading.py", line 1052, in _bootstrap_inner
-    self.run()
-  File "D:\Lib\threading.py", line 989, in run
-    self._target(*self._args, **self._kwargs)
-  File "D:\Olulu_06_96.py", line 413, in scan_clients
-    if pt_info_data[j]['client_IP'] !="離線" and len(data[j]['weight']) >0:# 檢查每一位帳面上有連線的病人
-                                                   ~~~~~~~^^^^^^^^^^
-TypeError: list indices must be integers or slices, not str
+#Exception in thread Thread-3 (handle_client):
+#Traceback (most recent call last):
+#  File "D:\Lib\threading.py", line 1052, in _bootstrap_inner
+#    self.run()
+#  File "D:\Lib\threading.py", line 989, in run
+#    self._target(*self._args, **self._kwargs)
+#  File "D:\Olulu_06_96.py", line 547, in handle_client
+#    message_A(message_list)
+#  File "D:\Olulu_06_96.py", line 609, in message_A
+#    if entry['name'] == new_name: #data字典中的name就是例如LuLu01等的ID
+#       ~~~~~^^^^^^^^
+#TypeError: list indices must be integers or slices, not str
+#Exception in thread Thread-2 (scan_clients):
+#Traceback (most recent call last):
+#  File "D:\Lib\threading.py", line 1052, in _bootstrap_inner
+#    self.run()
+#  File "D:\Lib\threading.py", line 989, in run
+#    self._target(*self._args, **self._kwargs)
+#  File "D:\Olulu_06_96.py", line 413, in scan_clients
+#    if pt_info_data[j]['client_IP'] !="離線" and len(data[j]['weight']) >0:# 檢查每一位帳面上有連線的病人
+#                                                   ~~~~~~~^^^^^^^^^^
+#TypeError: list indices must be integers or slices, not str
 
 
 
