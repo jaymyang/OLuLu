@@ -98,7 +98,7 @@ previous_selected=0
 ######以下是主thread： 介面######################################################
 #不知道為什麼，這個display info跑了8次
 def display_info(button_number,displayed):
-    global current_button_number
+    global current_button_number,clients,unassigned_clients
     y=[]
     one_eight_selection=1
     
@@ -116,6 +116,15 @@ def display_info(button_number,displayed):
         #設定為所選取的button
         info_on_button = pt_info_data[button_number]["pt_number"]
 
+		if len(unassigned_clients)>0:
+			bed_number= simpledialog.askstring("輸入床位", f"請輸入 {unassigned_clients[0]} 的床號:")
+			if bed_number:
+				for i in pt_info_data:
+					if pt_info_data[i]["Bed"]==bed_number:
+						pt_info_data[i]["client_name"]=unassigned_clients[0]
+						update_button_text(bed)
+				del unassigned_clients[0]
+	
         if info_on_button == "請輸入病歷號":
             patient_id = simpledialog.askstring("輸入病歷號", f"請輸入 {pt_info_data[button_number]['Bed']} 的病歷號:")
             if patient_id: #輸入完成
