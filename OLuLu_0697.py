@@ -62,19 +62,21 @@ from sklearn.linear_model import LinearRegression #回歸用
 formatted_time_list = []
 x=[]
 y=[]
-# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_name，pt_number為病歷號，client_name為各個客戶端的名字，需與各客戶端的arduino code對應.
+# pt_info_data：介面工作用基本字典，如連線則於cleint_name顯示client_name，pt_number為病歷號，本版將client_name改為可變，由另一個串列來調整，是因為不知道為什麼常常會出現錯亂.
 pt_info_data = {
-    0: {"Bed": "3L01", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu01'},
-    1: {"Bed": "3L02", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu02'},
-    2: {"Bed": "3L03", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu03'},
-    3: {"Bed": "3L05", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu05'},
-    4: {"Bed": "3L06", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu06'},
-    5: {"Bed": "3L07", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu07'},
-    6: {"Bed": "3L08", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu08'},
-	7: {"Bed": "3L09", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu09'},
-    8: {"Bed": "3K17", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu17'},
-    9: {"Bed": "3K18", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': 'LuLu18'},
+    0: {"Bed": "3L01", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
+    1: {"Bed": "3L02", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
+    2: {"Bed": "3L03", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
+    3: {"Bed": "3L05", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
+    4: {"Bed": "3L06", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
+    5: {"Bed": "3L07", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
+    6: {"Bed": "3L08", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
+	7: {"Bed": "3L09", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
+    8: {"Bed": "3K17", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
+    9: {"Bed": "3K18", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
 }
+clients=['LuLu01','LuLu02','LuLu03','LuLu05','LuLu06','LuLu07','LuLu08','LuLu09','LuLu17','LuLu18']
+unassigned_clients=[] #之後若有新連入但尚未列在pt_info_data的client_name的，就放在這裡，然後在主畫面引發輸入視窗
 # clients：連線的客戶端字典；用來控制與客戶端的溝通
 clients = {}
 # 所有連線的客戶端的集合
@@ -586,10 +588,34 @@ def handle_client(client_socket, client_address): #client_address 是新連上�
 #-2-2-1-----------------------------------------------------缺斷線功能
 def message_R(message_list,client_address):
     print(message_list[-1],'已連線')	 #顯示的是id，也就是lulu01...等等
-    global pt_info_data
+    global pt_info_data,unassigned_clients,clients
     predefined_client= False
+    assigned_client=False
+    if message_list[-1] in clients == True:
+        for i in pt_info_data:
+           if pt_info_data[i]['client_name'] == message_list[-1]:
+	        assigned_client=True
+	    else:
+	        pass #現在反過來，如果已經登錄於pt_info_data中，表示已經註冊過了，跳過
+        if assigned_client == False:
+	    unassigned_client.append(message_list[-1])
+        else:
+	    pass
+    else:
+	print('非合格客戶端:',client_address[0])  ##應該要在這邊加入斷線
+        client_socket.close()
+
+	#    pt_info_data[i]['client_IP']=str(client_address[0]) #寫入pt_info_data中
+        #    predefined_client= True
+        #    update_button_text(i)
+        #else:
+        #    pass
+    #if predefined_client== False:
+
+    #print(clients)
+    #print(connected_clients)
 	
-    bed_n = simpledialog.askstring("新連線裝置", f"請輸入新裝置message_list[-1]的床號:")
+ #   bed_n = simpledialog.askstring("新連線裝置", f"請輸入新裝置message_list[-1]的床號:")
     if bed_n: #輸入床號完成，接下來要更動pt_info_data的東西
         for i in pt_info_data:
             if pt_info_data[i]['Bed'] == bed_n: #抓到所要的床號
