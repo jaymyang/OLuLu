@@ -75,7 +75,7 @@ pt_info_data = {
     8: {"Bed": "3K17", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
     9: {"Bed": "3K18", "client_IP": "離線", "pt_number": "請輸入病歷號", 'client_name': '請輸入床號'},
 }
-clients=['LuLu01','LuLu02','LuLu03','LuLu05','LuLu06','LuLu07','LuLu08','LuLu09','LuLu17','LuLu18']
+client_list=['LuLu01','LuLu02','LuLu03','LuLu05','LuLu06','LuLu07','LuLu08','LuLu09','LuLu17','LuLu18']
 unassigned_clients=[] #之後若有新連入但尚未列在pt_info_data的client_name的，就放在這裡，然後在主畫面引發輸入視窗
 # clients：連線的客戶端字典；用來控制與客戶端的溝通
 clients = {}
@@ -98,7 +98,7 @@ previous_selected=0
 ######以下是主thread： 介面######################################################
 #不知道為什麼，這個display info跑了8次
 def display_info(button_number,displayed):
-    global current_button_number,clients,unassigned_clients
+    global current_button_number,client_list,unassigned_clients
     y=[]
     one_eight_selection=1
     
@@ -599,10 +599,10 @@ def handle_client(client_socket, client_address): #client_address 是新連上�
 #-2-2-1-----------------------------------------------------缺斷線功能
 def message_R(message_list,client_address):
     print(message_list[-1],'已連線')	 #顯示的是id，也就是lulu01...等等
-    global pt_info_data,unassigned_clients,clients
+    global pt_info_data,unassigned_clients,client_list
     predefined_client= False
     assigned_client=False
-    if message_list[-1] in clients == True:
+    if message_list[-1] in client_lists == True:
         for i in pt_info_data:
            if pt_info_data[i]['client_name'] == message_list[-1]:
 	        assigned_client=True
@@ -623,7 +623,7 @@ def message_R(message_list,client_address):
         #    pass
     #if predefined_client== False:
 
-    #print(clients)
+    #print(client_list)
     #print(connected_clients)
 	
  #   bed_n = simpledialog.askstring("新連線裝置", f"請輸入新裝置message_list[-1]的床號:")
