@@ -1,3 +1,4 @@
+#theme_number要依照theme的數目來調整，有n個主題就除以n
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import socket
@@ -44,32 +45,43 @@ switch_1_8=1
 #以下為如做主題變化功能時所要用的；本來想要再加一個按鈕讓使用者選擇，但是覺得太亂。所以可以做成隱藏功能，將顯示資訊，目前設為不可點選的按鈕，改成可點選，每點一次+1然後用餘數來做為選擇樣式（存在前面那兩個字典）的指令；而且因為改成可點選的隱藏版，就可以用tk就好，可以把它弄成flat使其看來不像按鈕
 #0: ["blue","yellow","(12)"],
 #訊息顯示處
-theme_number=2 #有N種主題就設N。0為原始
+theme_number=3 #有N種主題就設N。0為原始
 t_n=0
+#下方中央資訊按鈕配色1
 style_info_0 = {
     0:["green","gray","(12)"],
-    1:["#FFF5D9","#C1D57F"]}
+    1:["#E8EC98","#769D41"],
+    2:["#97C619","#5F6264"]}
+#下方中央資訊按鈕配色2
 style_info_1 = {
-    0:["reD","white","(12)"],
-    1:["#F8EBAE","#B79CC6"]}
+    0:["red","white","(12)"],
+    1:["#FFFFFF","#769D41"],
+    2:["#FFFFFF","#5F6264"]}
+#下方中央資訊按鈕配色3
 style_info_2 = {
     0:["blue","white","(12)"],
-    1:["#B79CC6","#F8EBAE"]}
-#繪圖區下方按鈕
+    1:["#FFF2C6","#769D41"],
+    2:["#FBE088","#5F6264"]}
+#下方兩側按鈕
 style_1_8={
     0:["black","#ECF5FF","(12)"],
-    1:["#B4509A","#C1D57F"]}
-#繪圖區
+    1:["#E8EC98","#769D41"],
+    2:["#EFEFEF","#898989"]}
+#繪圖區[0:<500時顏色；1:>500時顏色；2:繪圖區背景色；3背景色]
 style_display={
     0:["orange","blue","white","#FFFAF4"],
-    1:["#F8EBAE","#C1D57F","white","#FFF5D9"]} #[0:<500時顏色；1:>500時顏色；2:繪圖區背景色；3背景色]
+    1:["#F29300","#8AA228","#FFFBFF","#F3F1DF"],
+    2:["#AD6F49","#00519A","#5F6264","#270000"]} 
 #床位按鈕
 style_bed={
     0:["black","#FBFBFF","(12)"],
-    1:["#B79CC6","#F8EBAE"]} #[0前景色，1背景]
+    1:["#E8EC98","#769D41"],
+    2:["#EFEFEF","#898989"]} #[0前景色，1背景]
+#選中床位按鈕
 style_bed_S={
     0:["white","orange","(12)"],
-    1:["#F8EBAE","#B79CC6"]}
+    1:["#000000","#F29300"],
+    2:["#231815","#BE9572"]}
 #測試用來關閉程式的開關
 closing=False
 # clients：連線的客戶端字典；用來控制與客戶端的溝通，因為擔心thread競爭，加上鎖
@@ -83,7 +95,7 @@ data_lock = threading.Lock()
 
 logging_out_ip=queue.Queue()
 # 所有連線的客戶端的集合，利用集合僅能有一個相同值的特性
-connected_clients = set()
+new_connected_clients = set()
 thread_list=[] #開發用，用來追蹤有哪些執行緒，以免執行緒沒有中斷造成資源耗用爆炸
 
 
@@ -100,8 +112,8 @@ def start_server(): #    持續接受新客戶端連線
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # 允許快速重用address
-    #server.bind(("192.168.50.127", 8080))
-    server.bind(("192.168.50.150", 8080))
+    server.bind(("192.168.50.127", 8080))
+    #server.bind(("192.168.50.150", 8080))
     #server.bind(("192.168.1.101", 8080))
     server.listen(10) #設定最多10個連線
     t_close=threading.Thread(target=close_connection, daemon=True)
@@ -234,30 +246,33 @@ def handle_client(client_socket, client_address): #client_address 是新連上�
     with clients_lock:  # 使用鎖來保護 clients 字典
         if client_address in clients:
             del clients[client_address]#從字典中移除
-    print(f"客戶端 {client_address} 連線中斷")
+    print(f"中斷客戶端 {client_address} 連線")
 
 #-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--#
 #                        #-2-2處理訊息-#                           #
 #-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--#
 #======================2-2-1處理新連線感測器======================
 def message_R(message_list, client_address): 
-    global client_dict,client_list, connected_clients, t_n
+    global client_dict,client_list, new_connected_clients, t_n,pt_info_data
 
     client_name = message_list[-1]  # 取得感測器名稱，例如 'LuLu01'
     client_ip = client_address[0]  # 取得感測器的 IP 地址
+    connected_client_ips = [data["client_name"] for data in pt_info_data.values()] #已經有登錄的
     print(f"{client_name} 已連線，IP: {client_ip}")
-
+    print(client_name[-2:],connected_client_ips)
     if client_name in client_list:  # 檢查是否為合法感測器
-        for j in client_dict:
+        for j in client_dict:            
             if 'LuLu' + client_dict[j][0] == client_name:
-                client_dict[j][1] = "blue"  # 標記為已連線
+                if client_name in connected_client_ips:
+                    pass
+                else:
+                    client_dict[j][1] = "blue"  # 標記為已連線可用
                 with client_dict_lock:
                     client_dict[j][2] = client_ip  # 更新 IP
-                break
-        
-        connected_clients.add(client_name[-2:]) #僅顯示編號
-        #print(client_dict)
-        dataDisplay_text.config(text=f"{'已連線的感測器：'+str(connected_clients)} \n {'請點選床位按鈕登錄感測器與病人'}", foreground=style_info_1[t_n][0],anchor=tk.CENTER)
+                break      
+        new_connected_clients.add(client_name[-2:]) #僅顯示編號
+        print(client_dict)
+        Display_text.config(text=f"{'已連線的感測器：'+str(new_connected_clients)} \n {'請點選床位按鈕登錄感測器與病人'}", foreground=style_info_1[t_n][0],anchor=tk.CENTER)
 
     else:
         print(f"非合格客戶端: {client_ip} (未登錄)")
@@ -274,7 +289,6 @@ def message_A(message_list):
     global data
     new_weight=None
     raw_wt_list=[]
-    print(raw_wt_list)
     message_list.pop(0)  #去掉第一個（識別字元A）
     new_name =message_list[-1] #表示這資料來自於哪個客戶端
     raw_data_list=list(map(int,message_list[1:-2]))#去頭尾且轉整數
@@ -335,29 +349,53 @@ def scan_clients():
     to_remove = []
     displayed=False
     checked_data=False 
-    while True:
-        
+    while True:        
         current_time = time.localtime(time.time())
 
         if closing==True:
             break
+        if current_time.tm_sec == 0: # 每分鐘的00秒執行掃描，送心跳包確認連線狀況
+            print("scan_clients: 開始檢查連線狀態")
+            for client_address, client_socket in list(clients.items()):
+                try:
+                    client_socket.send("9".encode())
+                    print(f"發送心跳包至 {client_address}")
+                except (socket.error, BrokenPipeError) as e:
+                    print(f"無法向 {client_address} 發送訊息，錯誤: {e}")
+                    to_remove.append(client_address)  # 收集需要刪除的 client_address
+            with clients_lock: #這個是定時除去所有需要刪除的連線。但是在WIFI斷線的情形中，handle_clients會先偵測到連線中斷。
+                print('請檢查下列感測器：',to_remove)
+                for address in to_remove:
+                    if address in clients:
+                        print(f"從 clients 移除 {address}")
+                        clients[address].close()
+                        del clients[address]
+                        # 通知 close_connection 清理 IP
+                        with logging_out_ip_lock:
+                            logging_out_ip.put(str(address[0]))
+                to_remove.clear()  # 清空列表
+            time.sleep(0.9)
 
         if current_time.tm_sec == 1: # 每分鐘的01秒執行掃描
             for client_address, client_socket in list(clients.items()):# 迭代 clients
                 try:
                     client_socket.send("1".encode())
                     print(f'發送1 {client_address}')
-                except (socket.error, BrokenPipeError) as e:
-                    print(f"無法向 {client_address} 發送訊息，錯誤: {e}")
-                    # 移除斷開的客戶端；但這要注意如果又自動連上了，為免使用者麻煩，應可自動尋找本來登錄處並且逕行加入資料
+                #except (socket.error, BrokenPipeError) as e:
+                except (socket.error, BrokenPipeError, ConnectionResetError) as e:
+                    print(f"無法向 {client_address} 發送訊息，錯誤: {e}")                    
                     to_remove.append(client_address)  # 收集需要刪除的 client_address
+                    
                 time.sleep(1)  # 每一秒鐘依次向名單中的客戶端發命令。
-            with clients_lock:
-                for address in to_remove:
-                    if address in clients:
-                        del clients[address]
-                        clients[address].close()                
-             
+        if current_time.tm_sec == 38 and len(to_remove) != 0: # 每分鐘的38秒執行未連線掃描            
+            for client_address, client_socket in list(to_remove.items()):# 迭代 to_remove
+                try:
+                    client_socket.send("9".encode())
+                    print(f'發送9確認是否仍連線 {client_address}')
+                except (socket.error, BrokenPipeError) as e:
+                    print(f"無法向 {client_address} 發送訊息9，錯誤: {e}")                    
+
+    # 注意，25秒時只有負責處理資料，並未處理連線問題。
     # 每分鐘的25秒遍歷已登錄且連線中病人的time，如無符合目前時間的資料，就append.既有串列裡最後一個補足資料缺口
         if time.localtime(time.time()).tm_sec == 25 and len(data)>0 and checked_data==False:#
             for j in range(len(data)): #檢查既有資料名單。這邊查詢的方式改變，是因為data中，只有已登錄ID的床號與病歷號，才會有資料，所以_info_data與data的數據順序不再同步
@@ -369,7 +407,7 @@ def scan_clients():
                                 with data_lock:
                                     data[j]['time'].append(time.strftime('%Y-%m-%d %H:%M')) #加上目前時間
                                     data[j]['weight'].append(data[j]['weight'][-1])  #加上既有串列裡最後一個
-                                    display_text.config(f"請檢查 {data[j]['name']}感測器狀況",anchor=tk.CENTER)
+                                    #Display_text.config(f"請檢查 {data[j]['name']}感測器狀況",anchor=tk.CENTER)
                                 break #注意用break 跳出是否會發生沒有補齊的情形？
                             else:
                                 pass
@@ -377,7 +415,9 @@ def scan_clients():
                             pass
             checked_data=True
         elif current_time.tm_sec == 26:
-            checked_data=False 
+            checked_data=False
+
+
 
      # 每分鐘的31秒更新顯示
         if current_time.tm_sec == 31 and len(data) >0:
@@ -499,7 +539,7 @@ def logout_client():
             
             print('已登出並存檔',data)
             canvas.delete("all")
-            canvas.create_image(90, 1, image=init_image_tk, anchor="nw")
+            canvas.create_image(125, 1, image=init_image_tk, anchor="nw")
             return_to_main()
     else:
         messagebox.showinfo("注意", "請先選擇病床再登出")
@@ -538,6 +578,7 @@ def on_closing(): #
     else:
         print("取消關閉視窗")
 
+
 #####################################################################################
 #MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM 主thread：介面 MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM#
 #####################################################################################
@@ -554,7 +595,7 @@ def display_switch(selection):
 #                           #-將病人與感測器登錄到病床-#                            #
 #-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--#
 def assign_bed(button_number,assign_bed_displayed): #button_number就是所選的按鈕編號，由0起算
-    global client_list,unassigned_clients, button_on_display, data, pt_info_data, connected_clients,client_dict
+    global client_list,unassigned_clients, button_on_display, data, pt_info_data, new_connected_clients,client_dict
     #應注意上面的諸多變數希望能改成有lock的
     if button_on_display==None:
         button_on_display=button_number
@@ -593,8 +634,8 @@ def assign_bed(button_number,assign_bed_displayed): #button_number就是所選�
             with client_dict_lock:
                 client_dict[int(selected_value)][1]='grey' #注意引數。改為灰色
             update_radio_buttons()                      #使其不能選取
-            connected_clients.discard(chosen_client)  #移除已連線感測器名單
-            dataDisplay_text.config(text=f"已連線的感測器： \n {connected_clients}",foreground=style_info_2[t_n][0],anchor=tk.CENTER) #顯示已連線的感測器
+            new_connected_clients.discard(chosen_client)  #移除已連線感測器名單
+            Display_text.config(text=f"已連線的感測器： \n {new_connected_clients}",foreground=style_info_2[t_n][0],anchor=tk.CENTER) #顯示已連線的感測器
             button_number = right_frame.winfo_children()[button_number]
             button_number.config(style="Selected.TButton")
             update_button_text(button_on_display,1)
@@ -631,7 +672,7 @@ def assign_bed(button_number,assign_bed_displayed): #button_number就是所選�
         previous_selected = button_on_display #將已選擇值暫存為previous_selected
         button_on_display = button_number #將已選按鈕值改為新按鈕（button_number）
 
-        # 將新已選按鈕（新按鈕，buon_number）變色
+        # 將新已選按鈕（新按鈕，button_number）變色
         selected_button = right_frame.winfo_children()[button_number]
         selected_button.config(style="Selected.TButton")
 
@@ -696,7 +737,7 @@ def display_info(button_number, displayed):
         client_i_p = pt_info_data[button_number]["client_IP"]
         info_on_button = pt_info_data[button_number]["pt_number"]
         client_id = pt_info_data[button_number]["client_name"]        
-        dataDisplay_text.config(text=f"Bed:{bed}     pt_number:{info_on_button}    Client ID: {client_id} \n Button {button_number} \t  client_IP: {client_i_p}",foreground=style_info_0[t_n][0],anchor=tk.CENTER) #顯示選擇之資訊
+        Display_text.config(text=f"Bed:{bed}     pt_number:{info_on_button}    Client ID: {client_id} \n Button {button_number} \t  client_IP: {client_i_p}",foreground=style_info_0[t_n][0],anchor=tk.CENTER) #顯示選擇之資訊
         one_eight_switch(one_eight_selection) 
         
         #-+--+--+--+--+-以下估計回歸，但因Windows 8版的Python限制，暫時停用-+--+--+--+--+-
@@ -704,7 +745,7 @@ def display_info(button_number, displayed):
 #        if len(trend_points)>20: #超過20個非0資料點再計算
 #            trend=[]
 #            trend=trend_prediction(trend_points) #算回歸係數
-#            dataDisplay_text.config(text=f"Button {button_number}\n Bed: {bed}\n pt_number: {info_on_button}\n 過去10分鐘重量變化: {trend[0]} \n 過去十分鐘趨勢: {trend[1]}")
+#            Display_text.config(text=f"Button {button_number}\n Bed: {bed}\n pt_number: {info_on_button}\n 過去10分鐘重量變化: {trend[0]} \n 過去十分鐘趨勢: {trend[1]}")
         displayed=True
         return displayed
 
@@ -742,7 +783,7 @@ def one_eight_switch(switch_1_8): #第一步：準備要畫圖的資料點
                     y.append(0)                
         except Exception as e:
             canvas.delete("all")
-            canvas.create_image(90, 1, image=init_image_tk, anchor="nw") #理論上在這裡應該會先清空然後顯示起始畫面
+            canvas.create_image(125, 1, image=init_image_tk, anchor="nw") #理論上在這裡應該會先清空然後顯示起始畫面
             y=one_eight_switch(switch_1_8)
             print(f"記憶體內的資料處理錯誤：{e}")
         if len(data_to_be_displayed['time'])<60:
@@ -784,10 +825,11 @@ def bargraph(switch_1_8,y):
     global t_n,temporary_y
     if not y:
         print("目前無資料可繪製圖形。") #這是為了曾經出現過的狀況，在shell關閉又開啟數次後畫不出圖來，經查仍在接收資料，但y是空的。先這樣試試看。
-        canvas.create_image(90, 1, image=init_image_tk, anchor="nw")#理論上在這裡應該會先清空然後顯示起始畫面
+        canvas.create_image(125, 1, image=init_image_tk, anchor="nw")#理論上在這裡應該會先清空然後顯示起始畫面
         y=one_eight_switch(switch_1_8)
         return
     temporary_y=y
+    canvas.config(bg=style_display[t_n][2])
     if switch_1_8==1:
         scale_x=12 #60個資料點
     else:
@@ -812,8 +854,8 @@ def bargraph(switch_1_8,y):
     # X 軸和 Y 軸與參考線
         canvas.create_line(55, 525, 55, 0, fill="black", width=1)  # y 軸
         for j in range(0, 5):
-            canvas.create_line(50, j * 100 + 25, 55, j * 100 + 25, fill="gray")      
-        canvas.create_line(55, 525, 775, 525, fill="black", width=1)  # x 軸
+            canvas.create_line(55, j * 100 + 25, 775, j * 100 + 25, fill="gray",width=1)      
+        canvas.create_line(55, 525, 780, 525, fill="black", width=1)  # x 軸
         
     # X 軸刻度
         for i in range(0, 61, 10):
@@ -827,11 +869,11 @@ def bargraph(switch_1_8,y):
             canvas.create_line(50, j * 100 + 25, 55, j * 100 + 25, fill="black")
             canvas.create_text(50, j * 100 + 25, font=(12), text=(5 - j) * 100*scale_y, anchor=tk.E)
     # X 軸和 Y 軸的標籤
-        canvas.create_text(390, 550, font=(16), text="Time from now (min)", anchor=tk.N)
+        canvas.create_text(398, 550, font=(16), text="Time from now (min)", anchor=tk.N)
         y_title="Weight"
         for p in range(0,6):
-            canvas.create_text(12, 200+15*p, font=(16), text=y_title[p], anchor=tk.S)
-        canvas.create_text(15, 320, font=(12), text="(g)", anchor=tk.S)
+            canvas.create_text(15, 200+15*p, font=(16), text=y_title[p], anchor=tk.S)
+        canvas.create_text(15, 300, font=(12), text="(g)", anchor=tk.S)
       
     except Exception as e:
         print(f"繪製長條圖時發生錯誤：{e}")
@@ -851,15 +893,15 @@ def update_button_text(button_number,action):
 def theme_selection():
     global theme_number,t_n,button_on_display,temporary_y
     theme_number=theme_number+1
-    t_n=theme_number % 2 #除數、theme_number要依照theme的數目來調整，有n個主題就除以n
-    dataDisplay_text.config(bg=style_info_1[t_n][1], fg=style_info_1[t_n][0])
+    t_n=theme_number % 3 #除數、theme_number要依照theme的數目來調整，有n個主題就除以n
+    Display_text.config(bg=style_info_1[t_n][1], fg=style_info_1[t_n][0])
     logout_client_button.config(bg=style_1_8[t_n][1])
     switch_button.config(bg=style_1_8[t_n][1])
     style.configure("TFrame", background=style_display[t_n][3])
     left_frame.config(style="TFrame")
     bargraph(switch_1_8,temporary_y) 
     right_frame.config(style="TFrame")
-    #root.configure(bg=style_display[t_n][3])
+    root.configure(bg=style_display[t_n][3]) #2/22打開這個看看，如果沒有什麼意義就再關掉
     
     # **更新所有床位按鈕**
     style.configure("TButton", font=("Arial", 12), padding=5,background=style_bed[t_n][1]) #右側按鈕色
@@ -868,16 +910,15 @@ def theme_selection():
         if i==button_on_display:
             button.config(style="Selected.TButton")
         else:
-
             button.config(style="TButton")
     
 # ======================回到主畫面======================
 def return_to_main():
     global t_n
-    connected_clients_str = ""
-    for client, status in connected_clients.items():
-        connected_clients_str += f"Client: {client}, Status: {status}\n"
-    dataDisplay_text.config(text=f"點選床位按鈕以查看資料 \n 已連線的感測器：\n{connected_clients_str}", foreground=style_info_1[t_n][0],anchor=tk.CENTER)
+    new_connected_clients_str = ""
+    for client, status in new_connected_clients.items():
+        new_connected_clients_str += f"Client: {client}, Status: {status}\n"
+    Display_text.config(text=f"點選床位按鈕以查看資料 \n 已連線的感測器：\n{new_connected_clients_str}", foreground=style_info_1[t_n][0],anchor=tk.CENTER)
 
 #####################################################################################  
 #                                       主畫面                                      #
@@ -914,13 +955,13 @@ canvas.grid(column=0,row=0,columnspan=3,padx=20,pady=0)
 try:
     init_image = Image.open("copyright_1.jpg")  #指定圖片
     init_image_tk = ImageTk.PhotoImage(init_image)
-    canvas.create_image(90, 1, image=init_image_tk, anchor="nw")
+    canvas.create_image(125, 1, image=init_image_tk, anchor="nw")
 except Exception as e:
     print(f"載入開機圖片發生錯誤：{e}")
 # 顯示使用者點選床位的資料
-dataDisplay_text = tk.Button(left_frame, text="等待感測器連線中",width=36, height=2,bg=style_info_1[t_n][1], fg=style_info_1[t_n][0], command=theme_selection,font=("Arial", 12),relief="flat")
-#dataDisplay_text = ttk.Label(left_frame, text="等待感測器連線中 \n",width=36,font=("Arial", 12), foreground=style_info_1[t_n][0],background=style_info_1[t_n][1],command=theme_selection,anchor=tk.CENTER)
-dataDisplay_text.grid(column=1,row=1)
+Display_text = tk.Button(left_frame, text="等待感測器連線中",width=36, height=2,bg=style_info_1[t_n][1], fg=style_info_1[t_n][0], command=theme_selection,font=("Arial", 12),relief="flat")
+#Display_text = ttk.Label(left_frame, text="等待感測器連線中 \n",width=36,font=("Arial", 12), foreground=style_info_1[t_n][0],background=style_info_1[t_n][1],command=theme_selection,anchor=tk.CENTER)
+Display_text.grid(column=1,row=1)
 
     
 #功能按鈕，注意尺寸大小單位是字元
