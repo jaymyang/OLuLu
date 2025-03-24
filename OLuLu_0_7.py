@@ -1,5 +1,4 @@
-#此為最新公開版
-#其他版號皆為工作版，穩定後將程式碼移至本版
+#此為最新公開版。其他各工作版穩定後，將程式碼移至此版
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import paho.mqtt.client as mqtt
@@ -55,8 +54,8 @@ t_n=0
 
 #配色皆以字典儲存
 style_info_0 = {0:["green","#FBFBFF"]} #下方中央資訊按鈕配色1，此配色也用於按鈕警示色，故背景需與style_bed相同。
-style_info_1 = {0:["red","white"]}#下方中央資訊按鈕配色2
-style_info_2 = {0:["blue","white"]}#下方中央資訊按鈕配色3
+style_info_1 = {0:["blue","white"]}#下方中央資訊按鈕配色2（一般）
+style_info_2 = {0:["red","white"]}#下方中央資訊按鈕配色3（警示）
 style_1_8={0:["black","#ECF5FF"]}#下方兩側按鈕
 style_display={0:["orange","blue","white","#FFFAF4"]}#繪圖區[0:<500時顏色；1:>500時顏色；2:繪圖區背景色；3背景色]
 style_bed={0:["black","#FBFBFF"]}#床位按鈕[0前景色，1背景]
@@ -797,6 +796,15 @@ def one_eight_switch(switch_1_8): #第一步：準備要畫圖的資料點
     trend_y=[] #用來計算回歸的
     start_time = datetime.now()
     data_to_be_displayed = []  # 初始化變數
+    # 取得 left_canvas 的寬度和高度
+    canvas_width = left_canvas.winfo_width()
+    canvas_height = left_canvas.winfo_height()
+    # 計算置中位置
+    center_x = canvas_width / 2
+    center_y = canvas_height / 2
+
+
+    
     #製造出顯示一小時或八小時資料時所需要的時間點陣列
     if switch_1_8==1:
         formatted_time_list = [(start_time - timedelta(minutes=i)).strftime('%Y-%m-%d %H:%M') for i in range(60)]        
@@ -820,7 +828,8 @@ def one_eight_switch(switch_1_8): #第一步：準備要畫圖的資料點
                         y.append(0)                
             except Exception as e:
                 left_canvas.delete("all")
-                left_canvas.create_image(125, 1, image=init_image_tk, anchor="nw") #理論上在這裡應該會先清空然後顯示起始畫面
+                # 使用計算出的置中位置和 anchor=tk.CENTER
+                init_image_item = left_canvas.create_image(center_x, center_y, image=init_image_tk, anchor=tk.CENTER, tags="init_image")
                 y=one_eight_switch(switch_1_8)
                 print(f"記憶體內的資料處理錯誤：{e}")
             if len(data_to_be_displayed['time'])<60:
@@ -831,7 +840,8 @@ def one_eight_switch(switch_1_8): #第一步：準備要畫圖的資料點
         Display_text.config(text=f"尚無資料可供繪圖")
         #顯示起始圖
         left_canvas.delete("all")
-        left_canvas.create_image(125, 1, image=init_image_tk, anchor="nw")#顯示起始畫面
+        #使用計算出的置中位置和 anchor=tk.CENTER
+        init_image_item = left_canvas.create_image(center_x, center_y, image=init_image_tk, anchor=tk.CENTER, tags="init_image")
         return
         
     # 如果是 8 小時模式，讀取檔案資料並補上在前面被當成0的部分
