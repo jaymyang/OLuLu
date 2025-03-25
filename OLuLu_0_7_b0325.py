@@ -418,6 +418,8 @@ def scan_clients(client):
                 turn_point_2=turn_point_1+1 #下一點
                 if turn_point_2>9: #轉折點在最後；理論上這不可能發生
                     diff_weight=np.max(cal_weight)-np.min(cal_weight)
+                elif turn_point_1==0: #表示一路增加或穩定
+                    diff_weight=np.max(cal_weight)-np.min(cal_weight)
                 else:
                     point_1=cal_weight[turn_point_1]-(intercept+turn_point_1*slope)
                     point_2=cal_weight[turn_point_2]-(intercept+turn_point_2*slope)
