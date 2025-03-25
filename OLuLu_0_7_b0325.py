@@ -1,4 +1,3 @@
-#此為最新公開版。其他各工作版穩定後，將程式碼移至此版
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import paho.mqtt.client as mqtt
@@ -308,7 +307,6 @@ def start_server():
 # ======================資料處理的主控程式。======================
 #定期向客戶端發送訊息收集資料。
 def scan_clients(client):
-    #print('scan clients')
     global button_on_display
     global data,client_list
     global unassigned_clients
@@ -320,7 +318,6 @@ def scan_clients(client):
     checked_data=False 
     while True:        
         current_time = time.localtime(time.time())
-
         if closing==True:
             break
         if current_time.tm_sec %30 == 0: # 每分鐘的00,30秒執行掃描，送出9確認連線狀況
@@ -334,20 +331,6 @@ def scan_clients(client):
                 client.publish(topic, "1")
                 print(f"Sent command 1 to {device_id}")
                 time.sleep(0.1)  # 延遲 0.1 秒
-
-     # 每分鐘的25秒補足資料（並非加入資料）。遍歷已登錄且連線中病人的time，如無符合目前時間的資料，就append.既有串列裡最後一個補足資料缺口
-    #    if time.localtime(time.time()).tm_sec == 25 and len(data)>0 and checked_data==False:#
-    #        for j in range(len(data)): #檢查既有資料名單。這邊查詢的方式改變，是因為data中，只有已登錄ID的床號與病歷號，才會有資料，所以_info_data與data的數據順序不再同步
-    #            print('追蹤是否有補足資料的j:',j)
-    #            if len(data[j]['weight']) >0: #如某床位已有重量資料
-    #                for k in range(len(pt_info_data)):
-    #                    #if pt_info_data[k]['client_IP'] !="離線" and pt_info_data[k]['client_number']==data[j]['client_number'] : #確認帳面上仍連線
-    #                    if data[j]['time'][-1] != (time.strftime('%Y-%m-%d %H:%M')): #表示為帳面上已有連線的用戶，其time欄位的最後一個是否等於目前時間，如否～
-    #                        with data_lock:
-    #                            data[j]['time'].append(time.strftime('%Y-%m-%d %H:%M')) #加上目前時間
-    #                            data[j]['weight'].append(data[j]['weight'][-1])  #加上既有串列裡最後一個
-    #                            Display_text.config(f"請檢查 {data[j]['client_number']}感測器狀況",anchor=tk.CENTER)
-                                
         if time.localtime(time.time()).tm_sec == 25 and len(data)>0 and checked_data==False:#
             for j in range(len(data)): #檢查既有資料名單（已經有資料的才需要補齊）
                 print('追蹤是否有補足資料的j:',j)
@@ -368,23 +351,12 @@ def scan_clients(client):
                             print('補時間')
                             Display_text.config(text=f"請檢查 {data[j]['client_number']}感測器狀況",anchor=tk.CENTER)
                             #break #注意用break 跳出是否會發生沒有補齊的情形？
-                        
-                    #with data_lock:
-                    #    print('補數據前的data',data)
-                    #    data[j]['weight'].append(data[j]['weight'][-1])  #務必先加上既有串列裡最後一個
-                    #    print('補上一個重量')
-                    #    data[j]['time'].append(time.strftime('%Y-%m-%d %H:%M')) #加上目前時間
-                    #    print('補時間')
-                        
-                    #    Display_text.config(f"請檢查 {data[j]['client_number']}感測器狀況",anchor=tk.CENTER)
-                    #    break #注意用break 跳出是否會發生沒有補齊的情形？
                 else:
                     pass
             checked_data=True
             time.sleep(1)
         elif current_time.tm_sec == 26: #由於補資料很快，一定可以在一秒內完成，所以這邊設定到26秒的時候再改
             checked_data=False
-
 
      # 每分鐘的31秒更新顯示
         if current_time.tm_sec == 31 and len(data) >0:
@@ -401,24 +373,62 @@ def scan_clients(client):
     # 因為每10分鐘才一次，故未與上面25秒處合併。
     # 折衷方式：不管如何，10分鐘存檔一次。為了減少硬碟讀取，將data裡存放每個病人60分鐘的資料，但每十分鐘就將最新的資料抓去存檔。並在每小時01分將data擷取最新60分鐘資料留存在記憶體內
     # 在35秒存檔，36秒重設存檔開關。由於登錄病人的邏輯改變，導致pt_info_data與data的indeces不一致，所以這裡隨之做出變化
-        if current_time.tm_min in min_for_saving and current_time.tm_sec == 35 and data !=[]: #嘗試改用拖時間法，所以把saved#掉了
-        #if current_time.tm_min in min_for_saving and current_time.tm_sec == 35 and not saved and data !=[]:
-            for j in range(len(data)): #只檢查已經有資料的。由於data字典中是以IP為key,省略了病歷號，雖然在重新連線時可以自動把資料扔進data，但在存檔時就必須去pt_info_data取得病歷號用來存檔
-                for k in range(len(pt_info_data)): #遍歷所有的感測器
-                    if pt_info_data[k]['pt_number'] !='請輸入病歷號': #有登錄的                    
-                        file_name=pt_info_data[k]['pt_number']+'.csv' #用戶的病歷號當檔名
-                        saving_data(data[j]['time'][-10:], data[j]['weight'][-10:], file_name) #把最後10項傳過去，但這要注意如果目前data未滿十項呢？
-                        decreasing=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k,decreasing) #把可能要進行的資料分析在這時順便呼叫。如果趨勢下降，添加
-                    else: #無登錄的床號直接跳過
-                        pass
-            #saved= True #所有已有的資料都已經存檔並分析了，將saved設為True，以免在同一秒內又再來一次
-            time.sleep(1.2) #確定上面的事情做完時已經超過35秒了
+        if current_time.tm_min in min_for_saving and current_time.tm_sec == 35 and not saved and data !=[]:
+            for k in range(len(pt_info_data)): #遍歷所有的床號
+                if pt_info_data[k]['pt_number'] !='請輸入病歷號': #有登錄的
+                    for j in range(len(data)): #找尋資料相符的
+                        if data[j]['pt_number']== pt_info_data[k]['pt_number']: #找到相符的資料
+                            file_name=pt_info_data[k]['pt_number']+'.csv' #用戶的病歷號當檔名
+                            saving_data(data[j]['time'][-10:], data[j]['weight'][-10:], file_name) #把最後10項傳過去存檔
+                            decreasing=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k,decreasing) #資料分析；如果趨勢下降，添加
+                saved= True #提早將saved設為True，以免在同一秒內又再來一次
+#            for j in range(len(data)): #只檢查已經有資料的。由於data字典中是以IP為key,省略了病歷號，雖然在重新連線時可以自動把資料扔進data，但在存檔時就必須去pt_info_data取得病歷號用來存檔
+#                for k in range(len(pt_info_data)): #接著遍歷所有的床號
+#                    if pt_info_data[k]['pt_number'] !='請輸入病歷號': #有登錄的                    
+#                        file_name=pt_info_data[k]['pt_number']+'.csv' #用戶的病歷號當檔名
+#                        saving_data(data[j]['time'][-10:], data[j]['weight'][-10:], file_name) #把最後10項傳過去，但這要注意如果目前data未滿十項呢？先前沒有出狀況，應該是因為剛好我的資料是按順序存入
+#                        decreasing=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k,decreasing) #把可能要進行的資料分析在這時順便呼叫。如果趨勢下降，添加
+#                    else: #無登錄的床號直接跳過
+#                        pass
+                
             Analysis_text.config(text=f"漸減：{decreasing}") #顯示顯示漸減的clients。如果將來資料太多電腦跑不完，那就將時間推遲。名稱為Analysis_text
-            #saved = False #重設是否已存檔開關
-        #elif current_time.tm_sec == 37 and saved == True: #由於不確定上面的事情一秒能不能做完，所以改成37秒再重設
-        #    Analysis_text.config(text=f"漸減：{decreasing}") #顯示顯示漸減的clients。如果將來資料太多電腦跑不完，那就將時間推遲。名稱為Analysis_text
-        #    saved = False #重設是否已存檔開關
-            
+            #time.sleep(1) #確定上面的事情做完時已經超過35秒了
+        if current_time.tm_sec == 36:
+            saved = False
+            #---------開發中功能，在此偷渡一下計算目前顯示的病人的重量-----------
+            turn_point_1=0
+            difference=0
+            diff_weight=0
+            new_diff=0
+            cal_weight=[]
+            for i in range(len(data)):    #記憶體內的資料，button_on_display為主
+                if data[i]['pt_number'] == pt_info_data[button_on_display]["pt_number"]  :
+                    if len(data[i]["weight"]) < 10:
+                        print("未滿10分鐘")
+                        break
+                    else:
+                        cal_weight=data[i]["weight"][-10:]    #用最近10分鐘資料這個串列來計算
+            if len(cal_weight)>0:
+                slope,intercept=linear_regression(cal_weight) #取得回歸直線的常數項與斜率
+                for j in range(0,len(cal_weight)-1,1):  #找出轉折點
+                    new_diff= cal_weight[j+1]-cal_weight[j]
+                    if new_diff < difference:
+                        difference=new_diff
+                        turn_point_1=j
+                turn_point_2=turn_point_1+1 #下一點
+                if turn_point_2>9: #轉折點在最後；理論上這不可能發生
+                    diff_weight=np.max(cal_weight)-np.min(cal_weight)
+                else:
+                    point_1=cal_weight[turn_point_1]-(intercept+turn_point_1*slope)
+                    point_2=cal_weight[turn_point_2]-(intercept+turn_point_2*slope)
+                    if point_1 * point_2 <0 and abs(point_2-point_1) >10: #相鄰兩點在回歸線的兩邊，且差異大於10
+                        cal_weight_1=data[:turn_point_1+1]
+                        cal_weight_2=data[turn_point_1+1:]
+                        diff_weight=np.max(cal_weight_1)-np.min(cal_weight_1)+np.max(cal_weight_2)-np.min(cal_weight_2)
+            print('turn_point',turn_point_1)
+            print('試算10分鐘重量變化',diff_weight)
+
+                                
      # 每整點的50秒裁減到只剩最多60個數據在記憶體中
         if time.localtime(time.time()).tm_min == 0 and time.localtime(time.time()).tm_sec == 50:
             with data_lock:
@@ -499,7 +509,7 @@ def data_analysis(weight,bed_no,k,decreasing):
     
 #~~~~~~~~~~~~~~~~~~線性回歸~~~~~~~~~~~~~~~~~~
 def linear_regression(y):
-    x = [1, 2, 3, 4, 5] 
+    x = list(range(1, len(y) + 1))
     
     #計算線性回歸的斜率 (m) 和截距 (b)，為了簡單起見，一律只取五個數據點
     #參數: x: 獨立變數數據點， y: 依賴變數數據點，都是list
@@ -879,8 +889,6 @@ def toggle_switch():
         
 #======================繪製長條圖======================
 def bargraph(switch_1_8,y):
-    print(f"left_canvas 寬度：{left_canvas.winfo_width()}")
-    print(f"left_canvas 高度：{left_canvas.winfo_height()}")
     global t_n,temporary_y
     if not y:
         print("目前無資料可繪製圖形。") #這是為了曾經出現過的狀況，在shell關閉又開啟數次後畫不出圖來，經查仍在接收資料，但y是空的。先這樣試試看。
