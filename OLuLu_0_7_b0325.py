@@ -1,3 +1,4 @@
+#line579(580)登出病人時有list index out of range錯誤
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import paho.mqtt.client as mqtt
@@ -578,14 +579,13 @@ def logout_client():
             for i in range(len(data)):
                 if data[i]['client_number'] == client_id: #data字典中的client_number就是pt_data_list中的clien_number，如LuLu01等的ID
                     data_to_be_saved=data[i]    #轉存預計存檔的資料
-                    del data[i]
-
-                    if data_to_be_saved !=[]:
-                        remained_item_n=-(time.localtime(time.time()).tm_min % 10)
-                        saving_data(data_to_be_saved['time'][remained_item_n:], data_to_be_saved['weight'][remained_item_n:], logout_file_name) #傳過去
+                    del data[i] #另一個方法，是把設定要刪除的變數=i，然後等迴圈跑完再去刪除。這樣比較不會出現把data數目減少導致與迴圈次數不符因而導致錯誤。
+                    break  #直接跳出迴圈，以免刪除後因串列個數與迴圈次數不符導致發生錯誤
                 else:
-                    pass        
-            
+                    pass
+            if data_to_be_saved !=[]:
+                remained_item_n=-(time.localtime(time.time()).tm_min % 10)
+                saving_data(data_to_be_saved['time'][remained_item_n:], data_to_be_saved['weight'][remained_item_n:], logout_file_name) #傳去進行存檔            
             print('已登出並存檔',data)
             left_canvas.delete("all")
             left_canvas.create_image(125, 1, image=init_image_tk, anchor="nw")
