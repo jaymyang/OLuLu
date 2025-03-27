@@ -391,7 +391,7 @@ def scan_clients(client):
                         if data[j]['pt_number']== pt_info_data[k]['pt_number']: #找到相符的資料
                             file_name=pt_info_data[k]['pt_number']+'.csv' #用戶的病歷號當檔名
                             saving_data(data[j]['time'][-10:], data[j]['weight'][-10:], file_name) #把最後10項傳過去存檔
-                            decreasing_list=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k,decreasing) #資料分析；如果趨勢下降，添加。
+                            decreasing_list=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k,decreasing_list) #資料分析；如果趨勢下降，添加。
                 saved= True #提早將saved設為True，以免在同一秒內又再來一次
             Analysis_text.config(text=f"漸減：{decreasing_list}") #顯示顯示漸減的clients。如果將來資料太多電腦跑不完，那就將時間推遲。名稱為Analysis_text
             print("分析完畢", current_time.tm_sec)
