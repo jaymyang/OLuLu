@@ -1,4 +1,9 @@
-#line579(580)登出病人時有list index out of range錯誤
+print('     %%%%%  %%        %%             Online Urine levering Utility   ')
+print('    %%   %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2025.')   
+print('    %%   %% %% %% %%  %% %% %%            Photo credit: Olulu        ')
+print('    %%   %% %% %% %%  %% %% %%         Theme color code is from      ') 
+print('     %%%%%  %%  %%%%% %%  %%%%%       Yosun Blind Co. Ltd, 1985.     ')
+print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, OLuLu, OLuLu, OLuLu, OLuLu.     ')
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import paho.mqtt.client as mqtt
@@ -12,7 +17,7 @@ import numpy as np
 import statistics
 from datetime import datetime, timedelta
 from PIL import Image, ImageTk
-#from sklearn.linear_model import LinearRegression #回歸用。因Windows8的Python很難裝，直接拿掉
+#from sklearn.linear_model import LinearRegression #回歸用。因Windows8的Python很難裝，後來乾脆直接算
 
 #formatted_time_list = []
 #x=[]
@@ -37,22 +42,22 @@ client_dict={
     } 
 #這個只有用來比對是不是合法客戶端
 client_list=['LuLu01','LuLu02','LuLu03','LuLu05','LuLu06','LuLu07','LuLu08','LuLu09','LuLu17','LuLu18']
-#主資料串列，但元素為字典；格式為{'client_number': new_ID, 'pt_number': 病歷號, 'time': [time.strftime('%Y-%m-%d %H:%M')], 'weight': [new_weight]}
+#主資料串列，各元素為字典，格式為{'client_number': new_ID, 'pt_number': 病歷號, 'time': [time.strftime('%Y-%m-%d %H:%M')], 'weight': [new_weight]}
 data=[]
-
 
 temporary_y=[] #暫存繪圖點之Y值
 button_on_display = None
 switch_1_8=1
-#訊息顯示區，第一區可點選（使用tk，弄成flat使其看來不像按鈕），每點一次+1然後用餘數來做為選擇樣式的指令
-#第二區原來單純顯示，但發現這樣跟第一區邊界不齊，所以改成一樣的格式。
+#訊息顯示區，分兩區以便同時顯示更多訊息。
+#兩區皆可點選（使用tk，弄成flat使其看來不像按鈕），每點一次+1然後用餘數來做為選擇樣式的指令
+
 #0: ["blue","yellow","(12)"],
 #訊息顯示處
 theme_number=0 #有N種主題就設N。0為原始
 theme_total=1
 t_n=0
 
-#配色皆以字典儲存
+#配色皆以字典儲存。以下為內建預設配色
 style_info_0 = {0:["green","#FBFBFF"]} #下方中央資訊按鈕配色1，此配色也用於按鈕警示色，故背景需與style_bed相同。
 style_info_1 = {0:["blue","white"]}#下方中央資訊按鈕配色2（一般）
 style_info_2 = {0:["red","white"]}#下方中央資訊按鈕配色3（警示）
@@ -64,7 +69,7 @@ style_bed_S={0:["white","orange"]}#選中床位按鈕[0前景色，1背景]
 with open('olulu_theme.csv', 'r', encoding='utf-8') as file:
     csv_reader = csv.reader(file)
     headers = next(csv_reader)  # 讀取標題行
-# 處理每一行數據
+# 把每一行配色加進去（內建為0）
     for i, row in enumerate(csv_reader):
         style_info_0[i+1] = [row[0], row[1]]
         style_info_1[i+1] = [row[2], row[3]]
@@ -74,7 +79,6 @@ with open('olulu_theme.csv', 'r', encoding='utf-8') as file:
         style_bed[i+1] = [row[12], row[13]]
         style_bed_S[i+1] = [row[14], row[15]]
     theme_total = i + 2  # i+1 從1開始，所以總行數是 i + 1，內建有一組所以+2
-    print(style_bed)
 
 #測試用來關閉程式的開關
 closing=False
@@ -124,7 +128,7 @@ def on_message(client, userdata, msg):
     message_buffer=''
     message_part1=''
     global closing,clients
-    message = msg.payload.decode() #將接收到的訊息解碼為字串#在這裡名為payload，實際上就是感測器傳來的東西
+    message = msg.payload.decode() #將接收到的訊息解碼為字串，感測器傳來的東西在這裡名為payload
     message.strip()
     #把新傳來的字串加上去
     message_buffer=message_buffer+message
@@ -185,40 +189,50 @@ def message_A(message_list):
     raw_wt_list=[]
     message_list.pop(0)  #去掉第一個（識別字元A）
     message_ID =message_list[-1] #表示這資料來自於哪個客戶端
-    raw_data_list=list(map(int,message_list[1:-2]))#去頭尾且轉整數
-    if len(raw_data_list)>0:
-        for i in range(0,len(raw_data_list)):
-            if -1000<raw_data_list[i] < 1000:
-                raw_wt_list.append(raw_data_list[i])
-            else:
-                pass
-    #處理過後，如果還有東西
-    if len(raw_wt_list)>0:
-        if np.max(raw_wt_list) - np.min(raw_wt_list) <= 5: #沿用02版，如果收到的資料變化不超過5，直接取平均；但這會不會是造成現行版本數字有些微波動的主因？是否直接取中位數就好？
-            new_weight = round(np.mean(raw_wt_list))
-        else:                                               #不然就取中位數
-            new_weight = round(statistics.median(raw_wt_list))
-    else: #全清空#此為異常數值
-        new_weight=-9999 
+    try:
+        raw_data_list=list(map(int,message_list[1:-2]))#去頭尾且轉整數
+        if len(raw_data_list)>0:
+            for i in range(0,len(raw_data_list)):
+                if -1000<raw_data_list[i] < 1000:
+                    raw_wt_list.append(raw_data_list[i])
+                else:
+                    pass
+        if len(raw_wt_list)>0:    #處理過後，如果還有東西
+            if np.max(raw_wt_list) - np.min(raw_wt_list) <= 5: #沿用02版，如果收到的資料變化不超過5，直接取平均；但這會不會是造成現行版本數字有些微波動的主因？是否直接取中位數就好？
+                new_weight = round(np.mean(raw_wt_list))
+            else:                                               #不然就取中位數
+                new_weight = round(statistics.median(raw_wt_list))
+        else: #全清空#此為異常數值
+            new_weight=-9999
+    except Exception as e:
+        print(f"message_A 接入訊息時發生錯誤：{e}")
+        new_weight = -9999  # 設定預設值，程式繼續運行
+    
     found = False
     for i in range(len(data)): #這邊直接加入資料
-        if data[i]['client_number'] == message_ID and data[i]['pt_number'] != '請輸入病歷號:':  #比對資料的ID（例如LuLu01等），且確定已有登錄
+        if data[i]['client_number'] == message_ID and data[i]['pt_number'] != '請輸入病歷號:':  #在data中找到ID與新進來的資料一樣的（例如LuLu01等），且確定已有登錄病歷號
             #print(data[i])                
             if new_weight==-9999 and len(data[i]['weight'])>1: #表示有異常數值出現，不取                
                 new_weight=data[i]['weight'][-1] #沿用上一個數字
             elif new_weight==-9999 and len(data[i]['weight'])<=1:
                 new_weight=0
             with data_lock:
+                if data[i]['time'] is None or data[i]['weight'] is None:
+                    print(f"message_A錯誤：data[{i}] 的 time 或 weight 為 None: {data[i]}")
+                    data[i]['time'] = data[i]['time'] or []
+                    data[i]['weight'] = data[i]['weight'] or []
                 data[i]['time'].append(time.strftime('%Y-%m-%d %H:%M')) #加入目前時間
                 data[i]['weight'].append(new_weight)                    #加入目前數值
-            found = True
+            found = True    #設定在床位按鈕有找到該登錄的感測器
             break
-        else:
+        else:       #就算找到一樣的ID，但如果沒有登錄病歷號，就不算，理論上就是下面的這一段
             pass
-    if not found and message_ID in client_list: #新登錄的「合法」感測器，以ID為準（client_number）存檔
+    if not found and message_ID in client_list: #在床位按鈕沒有找到本感測器，表示是尚未登錄的新「合法」感測器，將以ID（client_number）建立data
+        print('#新登錄的「合法」感測器，以ID為準（client_number）存檔')
         for j in pt_info_data:
-            if message_ID == pt_info_data[j]['client_number']: #在pt_info_data已有ID者表示已經登錄；如尚無病歷號則應跳過
-                with data_lock:#這時建立該感測器與病人資料
+            print(pt_info_data[j]['client_number'])
+            if message_ID == pt_info_data[j]['client_number']: #在pt_info_data已有ID者表示已經登錄，則新建資料；這是因為在登錄過程中，已經要求選擇感測器同時須輸入病歷號。
+                with data_lock:#建立該感測器與病人資料
                     data.append({'client_number': message_ID, 'pt_number': pt_info_data[j]['pt_number'], 'time': [time.strftime('%Y-%m-%d %H:%M')], 'weight': [new_weight]})
             else:
                 pass
@@ -330,27 +344,23 @@ def scan_clients(client):
             for device_id in client_list:
                 topic = f"command/{device_id}"  # 每個設備有獨立的指令主題
                 client.publish(topic, "1")
-                print(f"Sent command 1 to {device_id}")
-                time.sleep(0.1)  # 延遲 0.1 秒
+                #print(f"Sent command 1 to {device_id}")
+                time.sleep(0.1)  # 延遲 0.1 秒            
         if time.localtime(time.time()).tm_sec == 25 and len(data)>0 and checked_data==False:#
             for j in range(len(data)): #檢查既有資料名單（已經有資料的才需要補齊）
                 print('追蹤是否有補足資料的j:',j)
                 if len(data[j]['weight']) >0 and data[j]['time'][-1] != (time.strftime('%Y-%m-%d %H:%M')): ##如某床位已有重量資料且其time欄位的最後一個時間並非目前時間
                     print('有缺漏')
                     with data_lock:
-                        print(f"開始補數據, 當前 data: {data}")
-                        print(f"當前 j: {j}, data[j]: {data[j]}")
-                        print(f"當前 data[{j}]['weight']: {data[j]['weight']}, 類型: {type(data[j]['weight'])}, 長度: {len(data[j]['weight'])}")
-                        if len(data[j]['weight']) == 0:
-                            print(f"警告！data[{j}]['weight'] 為空列表，無法取 `-1`！")
-                        else:
-                            last_weight = data[j]['weight'][-1]  # 確保這行不會出錯
-                            print(f"最後一個 weight: {last_weight}")
-                            data[j]['weight'].append(last_weight)
-                            print(f"補上一個重量後: {data[j]['weight']}")
-                            data[j]['time'].append(time.strftime('%Y-%m-%d %H:%M')) #加上目前時間
-                            print('補時間')
-                            Display_text.config(text=f"請檢查 {data[j]['client_number']}感測器狀況",anchor=tk.CENTER)
+                        if data[j]['time'] is None or data[j]['weight'] is None:
+                            print(f"25秒補資料錯誤：data[{j}] 的 time 或 weight 為 None: {data[j]}")
+                            data[j]['time'] = data[j]['time'] or []
+                            data[j]['weight'] = data[j]['weight'] or []
+                        last_weight = data[j]['weight'][-1]  # 確保這行不會出錯
+                        data[j]['weight'].append(last_weight)
+                        data[j]['time'].append(time.strftime('%Y-%m-%d %H:%M')) #加上目前時間
+                        print('補時間')
+                        Display_text.config(text=f"請檢查 {data[j]['client_number']}感測器狀況",anchor=tk.CENTER)
                             #break #注意用break 跳出是否會發生沒有補齊的情形？
                 else:
                     pass
@@ -368,9 +378,9 @@ def scan_clients(client):
             else:
                 time.sleep (0.1)
                 pass
-        elif current_time.tm_sec == 32:
+        elif current_time.tm_sec == 33:
             displayed=False #重設回尚未顯示
-            decreasing=[] #存入斜率漸減的clients
+            decreasing_list=[] #宣告存入斜率漸減的clients
     # 因為每10分鐘才一次，故未與上面25秒處合併。
     # 折衷方式：不管如何，10分鐘存檔一次。為了減少硬碟讀取，將data裡存放每個病人60分鐘的資料，但每十分鐘就將最新的資料抓去存檔。並在每小時01分將data擷取最新60分鐘資料留存在記憶體內
     # 在35秒存檔，36秒重設存檔開關。由於登錄病人的邏輯改變，導致pt_info_data與data的indeces不一致，所以這裡隨之做出變化
@@ -381,22 +391,15 @@ def scan_clients(client):
                         if data[j]['pt_number']== pt_info_data[k]['pt_number']: #找到相符的資料
                             file_name=pt_info_data[k]['pt_number']+'.csv' #用戶的病歷號當檔名
                             saving_data(data[j]['time'][-10:], data[j]['weight'][-10:], file_name) #把最後10項傳過去存檔
-                            decreasing=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k,decreasing) #資料分析；如果趨勢下降，添加
+                            decreasing_list=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k,decreasing) #資料分析；如果趨勢下降，添加。
                 saved= True #提早將saved設為True，以免在同一秒內又再來一次
-#            for j in range(len(data)): #只檢查已經有資料的。由於data字典中是以IP為key,省略了病歷號，雖然在重新連線時可以自動把資料扔進data，但在存檔時就必須去pt_info_data取得病歷號用來存檔
-#                for k in range(len(pt_info_data)): #接著遍歷所有的床號
-#                    if pt_info_data[k]['pt_number'] !='請輸入病歷號': #有登錄的                    
-#                        file_name=pt_info_data[k]['pt_number']+'.csv' #用戶的病歷號當檔名
-#                        saving_data(data[j]['time'][-10:], data[j]['weight'][-10:], file_name) #把最後10項傳過去，但這要注意如果目前data未滿十項呢？先前沒有出狀況，應該是因為剛好我的資料是按順序存入
-#                        decreasing=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k,decreasing) #把可能要進行的資料分析在這時順便呼叫。如果趨勢下降，添加
-#                    else: #無登錄的床號直接跳過
-#                        pass
-                
-            Analysis_text.config(text=f"漸減：{decreasing}") #顯示顯示漸減的clients。如果將來資料太多電腦跑不完，那就將時間推遲。名稱為Analysis_text
-            #time.sleep(1) #確定上面的事情做完時已經超過35秒了
-        if current_time.tm_sec == 36:
+            Analysis_text.config(text=f"漸減：{decreasing_list}") #顯示顯示漸減的clients。如果將來資料太多電腦跑不完，那就將時間推遲。名稱為Analysis_text
+            print("分析完畢", current_time.tm_sec)
+            time.sleep(1) #確定上面的事情做完時已經超過35秒了
+        if current_time.tm_sec == 37: #延後一秒，以確定上面電腦處理得完
             saved = False
-            #---------開發中功能，在此偷渡一下計算目前顯示的病人的重量-----------
+     #在38秒計算目前顯示的病人的重量
+        if current_time.tm_min in min_for_saving and current_time.tm_sec == 38:
             turn_point_1=0
             difference=0
             diff_weight=0
@@ -430,7 +433,6 @@ def scan_clients(client):
                         diff_weight=np.max(cal_weight_1)-np.min(cal_weight_1)+np.max(cal_weight_2)-np.min(cal_weight_2)
             print('turn_point',turn_point_1)
             print('試算10分鐘重量變化',diff_weight)
-
                                 
      # 每整點的50秒裁減到只剩最多60個數據在記憶體中
         if time.localtime(time.time()).tm_min == 0 and time.localtime(time.time()).tm_sec == 50:
@@ -472,6 +474,7 @@ def saving_data(saving_time, saving_weight, file_name):
 #~~~~~~~~~~~~~~~~~~分析入口~~~~~~~~~~~~~~~~~~
 def data_analysis(weight,bed_no,k,decreasing):
     global button_on_display,pt_info_data
+    print('分析資料的函式收到的decreasing',decreasing)
     
     style.configure("Decreasing.TButton", 
                     background=style_info_0[t_n][1],  # 背景色
@@ -481,7 +484,8 @@ def data_analysis(weight,bed_no,k,decreasing):
                     foreground=style_bed[t_n][0])  # 前景色
     
     if len(weight) < 10:
-        return
+        print('資料點小於10個，跳過分析')              
+        return decreasing
     else:
         slope_10_5,intercept_10_5 =linear_regression(weight[-10:-5]) #最近的6-10分鐘數字
         slope_5_0,intercept_5_0 =linear_regression(weight[-5:]) #最近的五分鐘
@@ -506,18 +510,13 @@ def data_analysis(weight,bed_no,k,decreasing):
                         break
                     else:
                         pass
-        print(decreasing)
         return decreasing
 
     
 #~~~~~~~~~~~~~~~~~~線性回歸~~~~~~~~~~~~~~~~~~
+#計算線性回歸， x: 自變數，y:依變數，都是list。return:m: 斜率 b: 截距
 def linear_regression(y):
     x = list(range(1, len(y) + 1))
-    
-    #計算線性回歸的斜率 (m) 和截距 (b)，為了簡單起見，一律只取五個數據點
-    #參數: x: 獨立變數數據點， y: 依賴變數數據點，都是list
-    #return:m: 斜率 b: 截距
-    
     n = len(x)
     if n != len(y) or n == 0:
         raise ValueError("x 和 y 的長度必須相等且不為空")
@@ -567,30 +566,37 @@ def logout_client():
                 pt_info_data[button_on_display]['client_IP'] = "離線"
             update_button_text(button_on_display,2)
             # 遍歷 client_dict 並更新感測器選擇清單
-            for i in client_dict:
-                print(i)
+            for i in client_dict:    
                 with client_dict_lock:
-                    print(client_dict[i][0])
                     if 'LuLu'+ client_dict[i][0] == client_id:                    
                         client_dict[i][1] = 'blue'  # 在MQTT版本，直接改回可以登錄狀態**
                         client_dict[i][2] = ''  # **確保 IP 也被清除**
                         break
             #應執行存檔，存檔完成後清空data中本項。注意是否確實存到非整點、非半點的資料
-            for i in range(len(data)):
-                if data[i]['client_number'] == client_id: #data字典中的client_number就是pt_data_list中的clien_number，如LuLu01等的ID
-                    data_to_be_saved=data[i]    #轉存預計存檔的資料
-                    del data[i] #另一個方法，是把設定要刪除的變數=i，然後等迴圈跑完再去刪除。這樣比較不會出現把data數目減少導致與迴圈次數不符因而導致錯誤。
-                    break  #直接跳出迴圈，以免刪除後因串列個數與迴圈次數不符導致發生錯誤
-                else:
-                    pass
-            if data_to_be_saved !=[]:
-                remained_item_n=-(time.localtime(time.time()).tm_min % 10)
-                saving_data(data_to_be_saved['time'][remained_item_n:], data_to_be_saved['weight'][remained_item_n:], logout_file_name) #傳去進行存檔            
-            print('已登出並存檔',data)
+            data_to_be_saved=None
+            try:
+                with data_lock:
+                    for i in range(len(data)):
+                        if data[i]['client_number'] == client_id: #data字典中的client_number就是pt_data_list中的clien_number，如LuLu01等的ID
+                            data_to_be_saved=data[i]    #轉存預計存檔的資料
+                            del data[i] #另一個方法，是把設定要刪除的變數=i，然後等迴圈跑完再去刪除。這樣比較不會出現把data數目減少導致與迴圈次數不符因而導致錯誤。
+                            print(f"logout_client移除 data後: {data}")
+                            break  #直接跳出迴圈，以免刪除後因串列個數與迴圈次數不符導致發生錯誤
+                        else:
+                            pass
+            except Exception as e:
+                print(f"logout client處理data發生錯誤：{e}")
+                
+            if data_to_be_saved!=[]:
+                try:
+                    remained_item_n=-(time.localtime(time.time()).tm_min % 10)
+                    saving_data(data_to_be_saved['time'][remained_item_n:], data_to_be_saved['weight'][remained_item_n:], logout_file_name) #傳去進行存檔            
+                    print('已登出並存檔',data)
+                except Exception as e:
+                    print(f"logout client存檔發生錯誤：{e}")
             left_canvas.delete("all")
             left_canvas.create_image(125, 1, image=init_image_tk, anchor="nw")
             return
-            #return_to_main()
     else:
         messagebox.showinfo("注意", "請先選擇病床再登出")
 
@@ -609,7 +615,7 @@ def on_closing(): #
                         saving_data(data[j]['time'][remained_item_n:], data[j]['weight'][remained_item_n:], file_name)
 
             print("所有資料已存檔，感謝您的使用。")
-            print(thread_list)
+            print('thread list',thread_list)
              # 關閉所有客戶端連線
             for client_ip, client_socket in list(clients.items()):
                 try:
@@ -826,18 +832,18 @@ def one_eight_switch(switch_1_8): #第一步：準備要畫圖的資料點
     # 讀取記憶體中的資料。如果是暫時登出又再連上，可在每分鐘如發現顯示陣列內資料個數不滿60筆時，就嘗試讀檔來補足顯示用資料。這部份現在還沒做好。要這樣做的話，可以把讀取資料的部分寫成函式）
     #
     for i in range(len(data)):    #記憶體內的資料，button_on_display為主
-        if data[i]['pt_number'] == pt_info_data[button_on_display]["pt_number"]  : #本用感測器ID，但因MQTT版導入data也有pt_number，改用之
-            data_to_be_displayed=data[i] #-*-
+        if data[i]['pt_number'] == pt_info_data[button_on_display]["pt_number"]  : #找到該病人
+            data_to_be_displayed=data[i] #
     if data_to_be_displayed!=[]:
-        if data_to_be_displayed["weight"] !=[] and button_on_display is not None: #當然，要有選擇到某位病人才行
-            try:
+        if data_to_be_displayed["weight"] !=[] and button_on_display is not None: #有重量，且有選擇到某位病人
+            try:    #防止程式因錯誤（例如索引不存在）而崩潰。
                 for time_point in formatted_time_list:
                     if time_point in data_to_be_displayed['time']:
-                        index = data_to_be_displayed['time'].index(time_point)
-                        y.append(data_to_be_displayed['weight'][index])
-                        trend_y.append(data_to_be_displayed['weight'][index])
+                        index = data_to_be_displayed['time'].index(time_point) #找到該時間點在 time list中的索引。
+                        y.append(data_to_be_displayed['weight'][index])         #將對應索引的重量加入到 y list中。
+                        trend_y.append(data_to_be_displayed['weight'][index])   #將對應索引的重量加入到 trend_y list中。
                     else:
-                        y.append(0)                
+                        y.append(0)    #如果該時間點沒有對應的數據，就在 y 中添加一個 0 
             except Exception as e:
                 left_canvas.delete("all")
                 # 使用計算出的置中位置和 anchor=tk.CENTER
