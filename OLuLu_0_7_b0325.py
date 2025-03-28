@@ -3,7 +3,7 @@ print('    %%   %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2025.')
 print('    %%   %% %% %% %%  %% %% %%            Photo credit: Olulu        ')
 print('    %%   %% %% %% %%  %% %% %%         Theme color code is from      ') 
 print('     %%%%%  %%  %%%%% %%  %%%%%       Yosun Blind Co. Ltd, 1985.     ')
-print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, OLuLu, OLuLu, OLuLu, OLuLu.     ')
+print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, LuLu LuLu LuLu, OLuLu.     ')
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import paho.mqtt.client as mqtt
@@ -366,7 +366,7 @@ def scan_clients(client):
                     pass
             checked_data=True
             time.sleep(1)
-        elif current_time.tm_sec == 26: #由於補資料很快，一定可以在一秒內完成，所以這邊設定到26秒的時候再改
+        elif current_time.tm_sec == 26 or current_time.tm_sec == 27: #由於補資料很快，一定可以在一秒內完成，所以這邊設定到26秒的時候再改
             checked_data=False
 
      # 每分鐘的31秒更新顯示
@@ -378,7 +378,7 @@ def scan_clients(client):
             else:
                 time.sleep (0.1)
                 pass
-        elif current_time.tm_sec == 33:
+        elif current_time.tm_sec == 32 or current_time.tm_sec == 33:
             displayed=False #重設回尚未顯示
             decreasing_list=[] #宣告存入斜率漸減的clients
     # 因為每10分鐘才一次，故未與上面25秒處合併。
@@ -579,6 +579,8 @@ def logout_client():
                     for i in range(len(data)):
                         if data[i]['client_number'] == client_id: #data字典中的client_number就是pt_data_list中的clien_number，如LuLu01等的ID
                             data_to_be_saved=data[i]    #轉存預計存檔的資料
+                            if current_time.tm_sec in [25,31,35,38,50]:    #這些時間，scan_clients有用到 data，所以暫停1秒
+                                time.sleep(1) 
                             del data[i] #另一個方法，是把設定要刪除的變數=i，然後等迴圈跑完再去刪除。這樣比較不會出現把data數目減少導致與迴圈次數不符因而導致錯誤。
                             print(f"logout_client移除 data後: {data}")
                             break  #直接跳出迴圈，以免刪除後因串列個數與迴圈次數不符導致發生錯誤
