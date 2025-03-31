@@ -4,11 +4,15 @@ print('    %%   %% %% %% %%  %% %% %%            Photo credit: Olulu        ')
 print('    %%   %% %% %% %%  %% %% %%         Theme color code is from      ') 
 print('     %%%%%  %%  %%%%% %%  %%%%%       Yosun Blind Co. Ltd, 1985.     ')
 #以下啟動MQTT程式係由Gemini提供程式碼修改
-import os
-mqtt_path = r"C:Program Files\mosquitto\mosquitto.exe -v"
+import subprocess
+
+mqtt_path = r"C:\Program Files\mosquitto\mosquitto.exe"
+mqtt_args = ["-v"]  # 將參數放在一個列表中
 try:
-    os.system(mqtt_path)
+    subprocess.Popen([mqtt_path] + mqtt_args)  # 將路徑和參數合併
     print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, OLuLu, OLuLu, OLuLu, OLuLu.     ')
+except FileNotFoundError:
+    print("找不到 MQTT 代理程式。請確認路徑是否正確。")
 except Exception as e:
     print(f"啟動 MQTT 代理程式時發生錯誤：{e}")
 #以下三句分別放置在不同位置追蹤程式啟動過程
