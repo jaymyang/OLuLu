@@ -3,7 +3,18 @@ print('    %%   %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2025.')
 print('    %%   %% %% %% %%  %% %% %%            Photo credit: Olulu        ')
 print('    %%   %% %% %% %%  %% %% %%         Theme color code is from      ') 
 print('     %%%%%  %%  %%%%% %%  %%%%%       Yosun Blind Co. Ltd, 1985.     ')
-print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, LuLu LuLu LuLu, OLuLu.     ')
+#以下啟動MQTT程式係由Gemini提供程式碼修改
+import os
+mqtt_path = r"C:Program Files\mosquitto\mosquitto.exe -v"
+try:
+    os.system(mqtt_path)
+    print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, OLuLu, OLuLu, OLuLu, OLuLu.     ')
+except Exception as e:
+    print(f"啟動 MQTT 代理程式時發生錯誤：{e}")
+#以下三句分別放置在不同位置追蹤程式啟動過程
+#print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, OLuLu, OLuLu, OLuLu, OLuLu.     ')
+#print('        Kóo-tsui ê LuLu, khó-ài ê LuLu, LuLu LuLu LuLu, OLuLu.     ')
+#print('         LuLu LuLu LuLu, LuLu LuLu LuLu, LuLu LuLu LuLu OLuLu.     ')
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import paho.mqtt.client as mqtt
@@ -17,6 +28,7 @@ import numpy as np
 import statistics
 from datetime import datetime, timedelta
 from PIL import Image, ImageTk
+
 #from sklearn.linear_model import LinearRegression #回歸用。因Windows8的Python很難裝，後來乾脆直接算
 
 #formatted_time_list = []
@@ -319,6 +331,7 @@ def start_server():
 #-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--#
 #                            #-  時間控制（主控程式）-#                             #
 #-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--+-+--+--+--+--#
+print('         LuLu LuLu LuLu, LuLu LuLu LuLu, LuLu LuLu LuLu OLuLu.     ')
 # ======================資料處理的主控程式。======================
 #定期向客戶端發送訊息收集資料。
 def scan_clients(client):
@@ -330,7 +343,8 @@ def scan_clients(client):
     min_for_saving = [0, 10, 20, 30, 40, 50]
     to_remove = []
     displayed=False
-    checked_data=False 
+    checked_data=False
+    calculated_weight=False
     while True:        
         current_time = time.localtime(time.time())
         if closing==True:
@@ -368,6 +382,7 @@ def scan_clients(client):
             time.sleep(1)
         elif current_time.tm_sec == 26 or current_time.tm_sec == 27: #由於補資料很快，一定可以在一秒內完成，所以這邊設定到26秒的時候再改
             checked_data=False
+            calculated_weight=False
 
      # 每分鐘的31秒更新顯示
         if current_time.tm_sec == 31 and len(data) >0:
@@ -380,18 +395,25 @@ def scan_clients(client):
                 pass
         elif current_time.tm_sec == 32 or current_time.tm_sec == 33:
             displayed=False #重設回尚未顯示
-            decreasing_list=[] #宣告存入斜率漸減的clients
+            
     # 因為每10分鐘才一次，故未與上面25秒處合併。
     # 折衷方式：不管如何，10分鐘存檔一次。為了減少硬碟讀取，將data裡存放每個病人60分鐘的資料，但每十分鐘就將最新的資料抓去存檔。並在每小時01分將data擷取最新60分鐘資料留存在記憶體內
     # 在35秒存檔，36秒重設存檔開關。由於登錄病人的邏輯改變，導致pt_info_data與data的indeces不一致，所以這裡隨之做出變化
         if current_time.tm_min in min_for_saving and current_time.tm_sec == 35 and not saved and data !=[]:
+            decreasing_list=[] #宣告存入斜率漸減的clients。先重設為空
             for k in range(len(pt_info_data)): #遍歷所有的床號
                 if pt_info_data[k]['pt_number'] !='請輸入病歷號': #有登錄的
                     for j in range(len(data)): #找尋資料相符的
                         if data[j]['pt_number']== pt_info_data[k]['pt_number']: #找到相符的資料
                             file_name=pt_info_data[k]['pt_number']+'.csv' #用戶的病歷號當檔名
                             saving_data(data[j]['time'][-10:], data[j]['weight'][-10:], file_name) #把最後10項傳過去存檔
-                            decreasing_list=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k,decreasing_list) #資料分析；如果趨勢下降，添加。
+                            decreasing_o_i_d=''
+                            decreasing_o_i_d=data_analysis(data[j]['weight'][-10:],pt_info_data[k]['Bed'],k) #資料分析；如果趨勢下降，添加。
+                            print(decreasing_o_i_d)
+                            if decreasing_o_i_d=='d':
+                                decreasing_list.append(pt_info_data[k]['Bed'])
+                            else:
+                                pass                            
                 saved= True #提早將saved設為True，以免在同一秒內又再來一次
             Analysis_text.config(text=f"漸減：{decreasing_list}") #顯示顯示漸減的clients。如果將來資料太多電腦跑不完，那就將時間推遲。名稱為Analysis_text
             print("分析完畢", current_time.tm_sec)
@@ -399,7 +421,7 @@ def scan_clients(client):
         if current_time.tm_sec == 37: #延後一秒，以確定上面電腦處理得完
             saved = False
      #在38秒計算目前顯示的病人的重量
-        if current_time.tm_min in min_for_saving and current_time.tm_sec == 38:
+        if current_time.tm_min in min_for_saving and current_time.tm_sec == 38 and calculated_weight==False:
             turn_point_1=0
             difference=0
             diff_weight=0
@@ -428,12 +450,14 @@ def scan_clients(client):
                     point_1=cal_weight[turn_point_1]-(intercept+turn_point_1*slope)
                     point_2=cal_weight[turn_point_2]-(intercept+turn_point_2*slope)
                     if point_1 * point_2 <0 and abs(point_2-point_1) >10: #相鄰兩點在回歸線的兩邊，且差異大於10
-                        cal_weight_1=data[:turn_point_1+1]
-                        cal_weight_2=data[turn_point_1+1:]
+                        cal_weight_1=cal_weight[:turn_point_1+1]
+                        cal_weight_2=cal_weight[turn_point_1+1:]
                         diff_weight=np.max(cal_weight_1)-np.min(cal_weight_1)+np.max(cal_weight_2)-np.min(cal_weight_2)
             print('turn_point',turn_point_1)
             print('試算10分鐘重量變化',diff_weight)
-                                
+            time.sleep(0.1) #休息一下0.1秒
+            calculated_weight=True 
+            
      # 每整點的50秒裁減到只剩最多60個數據在記憶體中
         if time.localtime(time.time()).tm_min == 0 and time.localtime(time.time()).tm_sec == 50:
             with data_lock:
@@ -444,7 +468,6 @@ def scan_clients(client):
 #目前暫時不打算存入原始資料list，除非實際使用後常常出現怪異數值
 def saving_data(saving_time, saving_weight, file_name):
     try:
-
         # 檢查是否有值
         if not saving_time or not saving_weight:
             raise ValueError("輸入的 saving_time 或 saving_weight 為空")
@@ -472,9 +495,10 @@ def saving_data(saving_time, saving_weight, file_name):
         print(f"未知錯誤: {e}")
 # ======================資料分析。======================
 #~~~~~~~~~~~~~~~~~~分析入口~~~~~~~~~~~~~~~~~~
-def data_analysis(weight,bed_no,k,decreasing):
+def data_analysis(weight,bed_no,k):
+    trend=''
     global button_on_display,pt_info_data
-    print('分析資料的函式收到的decreasing',decreasing)
+    print('分析資料的函式收到的資料',weight,bed_no, k)
     
     style.configure("Decreasing.TButton", 
                     background=style_info_0[t_n][1],  # 背景色
@@ -484,13 +508,14 @@ def data_analysis(weight,bed_no,k,decreasing):
                     foreground=style_bed[t_n][0])  # 前景色
     
     if len(weight) < 10:
-        print('資料點小於10個，跳過分析')              
-        return decreasing
+        print('資料點小於10個，跳過分析')
+        trend='o' #omit
+        return trend
     else:
         slope_10_5,intercept_10_5 =linear_regression(weight[-10:-5]) #最近的6-10分鐘數字
         slope_5_0,intercept_5_0 =linear_regression(weight[-5:]) #最近的五分鐘
         if slope_5_0 > slope_10_5: #最近的斜率較大
-            #不管decreasing，因為這個只是用來顯示，而且先前在36秒已經重設為空
+            trend='i' #increase
             #但是必須重設床位按鈕的文字顏色
             for i, button in enumerate(right_frame.winfo_children()):
                 if i == k:
@@ -498,8 +523,9 @@ def data_analysis(weight,bed_no,k,decreasing):
                     break
                 else:
                     pass
+            return trend
         else: #最近的斜率較小，表示漸減
-            decreasing.append(bed_no)
+            trend='d' #decrease
             if bed_no==pt_info_data[button_on_display]['Bed']:
                 pass
             else:
@@ -510,9 +536,7 @@ def data_analysis(weight,bed_no,k,decreasing):
                         break
                     else:
                         pass
-        return decreasing
-
-    
+            return trend    
 #~~~~~~~~~~~~~~~~~~線性回歸~~~~~~~~~~~~~~~~~~
 #計算線性回歸， x: 自變數，y:依變數，都是list。return:m: 斜率 b: 截距
 def linear_regression(y):
@@ -799,7 +823,7 @@ def display_info(button_number, displayed):
         Display_text.config(text=f"Bed:{bed} \t Patient No.:{info_on_button} \t ID: {client_id}" ,foreground=style_info_0[t_n][0],anchor=tk.CENTER) #顯示選擇之資訊
         #print(text=f"IP: {client_i_p} Button:{button_number}")
         print(f"IP: {client_i_p} Button:{button_number}")
-        one_eight_switch(one_eight_selection) 
+        one_eight_switch(one_eight_selection)  #開始繪直線圖
 
         displayed=True
         return displayed
@@ -822,7 +846,6 @@ def one_eight_switch(switch_1_8): #第一步：準備要畫圖的資料點
     # 計算置中位置
     center_x = canvas_width / 2
     center_y = canvas_height / 2
-
 
     
     #製造出顯示一小時或八小時資料時所需要的時間點陣列
@@ -849,7 +872,7 @@ def one_eight_switch(switch_1_8): #第一步：準備要畫圖的資料點
             except Exception as e:
                 left_canvas.delete("all")
                 # 使用計算出的置中位置和 anchor=tk.CENTER
-                init_image_item = left_canvas.create_image(center_x, center_y, image=init_image_tk, anchor=tk.CENTER, tags="init_image")
+                init_image_1_item = left_canvas.create_image(center_x, center_y, image=init_image_1_tk, anchor=tk.CENTER, tags="init_image_1")
                 y=one_eight_switch(switch_1_8)
                 print(f"記憶體內的資料處理錯誤：{e}")
             if len(data_to_be_displayed['time'])<60:
@@ -858,10 +881,10 @@ def one_eight_switch(switch_1_8): #第一步：準備要畫圖的資料點
                 pass
     else:
         Display_text.config(text=f"尚無資料可供繪圖")
-        #顯示起始圖
+        #顯示圖
         left_canvas.delete("all")
         #使用計算出的置中位置和 anchor=tk.CENTER
-        init_image_item = left_canvas.create_image(center_x, center_y, image=init_image_tk, anchor=tk.CENTER, tags="init_image")
+        init_image_1_item = left_canvas.create_image(center_x, center_y, image=init_image_1_tk, anchor=tk.CENTER, tags="init_image_1")
         return
         
     # 如果是 8 小時模式，讀取檔案資料並補上在前面被當成0的部分
@@ -902,7 +925,7 @@ def bargraph(switch_1_8,y):
     global t_n,temporary_y
     if not y:
         print("目前無資料可繪製圖形。") #這是為了曾經出現過的狀況，在shell關閉又開啟數次後畫不出圖來，經查仍在接收資料，但y是空的。先這樣試試看。
-        left_canvas.create_image(125, 1, image=init_image_tk, anchor="nw")#理論上在這裡應該會先清空然後顯示起始畫面
+        left_canvas.create_image(125, 1, image=init_image_tk, anchor="nw")#理論上在這裡應該會先清空然後顯示起始畫面。注意這個圖形位置會跟其他的不一樣，因為在這邊並沒有計算畫布的中心座標
         y=one_eight_switch(switch_1_8)
         return
     temporary_y=y
@@ -1016,6 +1039,7 @@ def return_to_main():
 #####################################################################################  
 #                                       主畫面                                      #
 #####################################################################################
+print('        Kóo-tsui ê LuLu, khó-ài ê LuLu, LuLu LuLu LuLu, OLuLu.     ')
 # 初始化主畫面
 root = tk.Tk()
 root.title("OLuLu 0.70MQTT")
@@ -1080,7 +1104,9 @@ left_canvas.grid(column=0, row=0, columnspan=3, padx=20, pady=0)
 # 載入初始圖片
 try:
     init_image = Image.open("copyright_1.jpg")  #指定圖片
+    init_image_1 = Image.open("copyright_2.jpg")  #指定圖片
     init_image_tk = ImageTk.PhotoImage(init_image)
+    init_image_1_tk = ImageTk.PhotoImage(init_image_1)
     # 取得 left_canvas 的寬度和高度
     canvas_width = left_canvas.winfo_width()
     canvas_height = left_canvas.winfo_height()
@@ -1089,6 +1115,7 @@ try:
     center_y = canvas_height / 2
     # 使用計算出的置中位置和 anchor=tk.CENTER
     init_image_item = left_canvas.create_image(center_x, center_y, image=init_image_tk, anchor=tk.CENTER, tags="init_image")
+    #init_image_1_item = left_canvas.create_image(center_x, center_y, image=init_image_1_tk, anchor=tk.CENTER, tags="init_image_1")
     # 在 left_canvas 大小改變時重新計算置中位置
     def update_init_image_position(event):
         canvas_width = left_canvas.winfo_width()
