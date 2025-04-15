@@ -5,16 +5,29 @@ print('    %%   %% %% %% %%  %% %% %%         Theme color code is from      ')
 print('     %%%%%  %%  %%%%% %%  %%%%%       Yosun Blind Co. Ltd, 1985.     ')
 #以下啟動MQTT程式係由Gemini提供程式碼修改
 import subprocess
+import os
 
-mqtt_path = r"C:\Program Files\mosquitto\mosquitto.exe"
-mqtt_args = ["-v"]  # 將參數放在一個列表中
+# Mosquitto 的安裝路徑和執行檔名稱
+mosquitto_path = r"C:\Program Files\mosquitto"
+mosquitto_exe = "mosquitto.exe"
+full_path = os.path.join(mosquitto_path, mosquitto_exe)
+
 try:
-    subprocess.Popen([mqtt_path] + mqtt_args)  # 將路徑和參數合併
-    print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, OLuLu, OLuLu, OLuLu, OLuLu.     ')
+    # 使用 subprocess.Popen 執行 Mosquitto
+    # Popen 允許程式在後台運行（非阻塞）
+    process = subprocess.Popen([full_path])
+    print(f"Mosquitto broker 已在後台啟動，PID: {process.pid}")
+    print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, OLuLu, OLuLu, OLuLu, OLuLu.')
+    # 如果您希望程式等待 Mosquitto 結束後再繼續，可以使用 process.wait()
+    # process.wait()
+
 except FileNotFoundError:
-    print("找不到 MQTT 代理程式。請確認路徑是否正確。")
+    print(f"錯誤：找不到 Mosquitto 執行檔於 {full_path}")
 except Exception as e:
-    print(f"啟動 MQTT 代理程式時發生錯誤：{e}")
+    print(f"啟動 Mosquitto 時發生錯誤： {e}")
+
+    
+
 #以下三句分別放置在不同位置追蹤程式啟動過程
 #print('     Kóo-tsui ê LuLu, khó-ài ê LuLu, OLuLu, OLuLu, OLuLu, OLuLu.     ')
 #print('        Kóo-tsui ê LuLu, khó-ài ê LuLu, LuLu LuLu LuLu, OLuLu.     ')
@@ -573,6 +586,7 @@ def linear_regression(y):
 # ======================感測器連同病人一併登出======================
 def logout_client():
     global pt_info_data,button_on_display,clients,data, logging_out, client_to_be_closed,client_dict
+    current_time = time.localtime(time.time())
     if button_on_display is not None:
         bed = pt_info_data[button_on_display]["Bed"]
         info = pt_info_data[button_on_display]["pt_number"]
