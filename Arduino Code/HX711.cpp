@@ -33,7 +33,7 @@ unsigned int Get_Weight()
 	Weight_Shiwu = HX711_Buffer;
 	Weight_Shiwu = Weight_Shiwu - Weight_Maopi;				//獲取實物的AD採樣數值。
 	
-	Weight_Shiwu = (unsigned int)((float)Weight_Shiwu/4.3+0.05); 	
+	Weight_Shiwu = (unsigned int)((float)Weight_Shiwu/4.3+0.05); 	//5公斤的參數；10公斤為2.14，40公斤為1.073+0.05
 
 
 	return Weight_Shiwu;
