@@ -166,7 +166,7 @@ def on_message(client, userdata, msg):
         message_part1 = message_buffer[:message_split]
         message_buffer = message_buffer[message_split:]
     else:
-        print("Invalid message received:", message_buffer)
+        print("無效的訊息格式:", message_buffer)
         message_buffer = ""
 
     #接著將字串轉成list
@@ -1232,4 +1232,5 @@ threading.Thread(target=start_server, daemon=True).start()
 # 綁定關閉事件
 root.protocol("WM_DELETE_WINDOW", on_closing)
 root.mainloop()
+
 
