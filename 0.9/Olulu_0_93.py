@@ -1,6 +1,6 @@
 print('     %%%%%  %%        %%             Online Urine levering Utility   ')
-print('    %%   %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2025.')   
-print('    %%   %% %% %% %%  %% %% %%            Photo credit: Olulu        ')
+print('    %%   %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2026.')   
+print('    %%   %% %% %% %%  %% %% %%       Photo credit: Olulu the Poodle  ')
 print('    %%   %% %% %% %%  %% %% %%         Theme color code is from      ') 
 print('     %%%%%  %%  %%%%% %%  %%%%%       Yosun Blind Co. Ltd, 1985.     ')
 
@@ -1049,3 +1049,4 @@ if __name__ == "__main__":
     print('  LuLu LuLu, LuLu LuLu LuLu, LuLu LuLu LuLu OLuLu.     ')
     app = OLuLuSystem()
     app.mainloop()
+
