@@ -180,7 +180,7 @@ def get_resized_image(image_path, target_height):
             ratio = target_height / orig_h
             target_width = int(orig_w * ratio)
             
-            # 執行高品質縮放
+            # 高品質縮放演算法
             resized_img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
             
             # 轉換為 Tkinter 可用的格式
@@ -194,15 +194,16 @@ def get_resized_image(image_path, target_height):
 # ==================主程式，以下是主要介面==================   
 class OLuLuSystem(tk.Tk):
     """OLuLu 系統的主視窗與邏輯控制器"""
-    
+    #以下是全螢幕修圓角版。如果有問題，就照搬viewer的
     def __init__(self):
         super().__init__()
         
-        # 1. 拔除系統預設標題列 (開啟無邊框模式)
+        # 以下開始為圓角版
+        #===============1. 拔除系統預設標題列 (開啟無邊框模式)======
         self.overrideredirect(True)
         self.configure(bg="#F5F7FA")
 
-        # ================== 核心修改區塊 ==================
+        # ================== 圓角版主要修改的部分 ==================
         import os
         if os.name == 'nt':
             import ctypes
@@ -230,7 +231,7 @@ class OLuLuSystem(tk.Tk):
 
         # 將視窗精準塞入工作區域
         self.geometry(f"{window_width}x{window_height}+{start_x}+{start_y}")
-        # ==================================================
+        # ==================圓角版================================
 
         # 2. 手工打造「自訂標題列」 (記得這段一定要最先 pack，才會在最上層)
         self.title_bar = tk.Frame(self, bg="#2F3542", relief="flat", bd=0)
@@ -255,13 +256,11 @@ class OLuLuSystem(tk.Tk):
         # 如果切了圓角，螢幕四個角落會露出後面的桌面底色，看起來像破圖。
         self.update_idletasks()
         self.apply_rounded_corners(window_width, window_height, 20) # 20 是圓角的弧度
-
-        
-        
+               
         
         # 設定預設視窗大小，並嘗試在 Windows 上最大化
         #self.geometry("1366x700")
-        # ============ 防休眠 ============
+        # ============ 防休眠 （共通）============
         if os.name == 'nt':  # 只有 Windows 才能這樣做I
             import ctypes
             try:
@@ -271,11 +270,11 @@ class OLuLuSystem(tk.Tk):
                 print("請注意：防主機休眠機制未能啟動:", e)
         else:
             print("Linux 系統請至「系統設定 -> 電源管理」中關閉休眠與螢幕保護。")
-        # ============================================
+        # ===================（原生版）=========================
         #try:
         #    self.state("zoomed")
         #except: pass
-        
+        # ==================（以下共通）==========================
         # 載入主題與背景色
         self.load_themes()
         self.configure(bg=self.theme["bg_main"])
@@ -329,12 +328,12 @@ class OLuLuSystem(tk.Tk):
         self.timer_alert_flash()     # 處理警報閃爍效果
         # 攔截右上角的 X 關閉視窗按鈕
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
-    #def on_closing(self):
-    #    """關閉視窗前的確認對話框"""
+    #def on_closing(self): #原生版
+    #    """關閉視窗前的確認對話框；這是原生視窗用的"""
     #    if messagebox.askyesno("確認離開", "確定要關閉 OLuLu 系統嗎？\n(背景的連線與監控將會停止)"):
     #        self.destroy() # 使用者按「是」，關閉程式
 
-    # ================= 視窗外觀與操作邏輯 =================
+    # ================= 視窗外觀與操作邏輯 （圓角版）=================
     def start_move(self, event):
         """記錄滑鼠點下時的座標"""
         self.x = event.x
@@ -363,7 +362,7 @@ class OLuLuSystem(tk.Tk):
             self.destroy()
             
 
-    # ------------------ 圖片資源 ------------------
+    # ------------------ 圖片資源（共通） ------------------
     def load_images(self): #取得圖片通通在這邊
         # 取得基本路徑（與本程式在同一資料夾）
         if getattr(sys, 'frozen', False):
@@ -372,14 +371,14 @@ class OLuLuSystem(tk.Tk):
             BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         # 取得螢幕高度
         screen_h = self.winfo_screenheight()
-        # --- 開機圖 (佔螢幕 75%) ---
+        # --- 開機圖 (佔螢幕 50%) ---
         path_startup = os.path.join(BASE_DIR, "copyright_1.jpg")
-        target_h_startup = int(screen_h * 0.75)
+        target_h_startup = int(screen_h * 0.50)
         self.img_startup, self.startup_w = get_resized_image(path_startup, target_h_startup)
         self.startup_h = target_h_startup
-        # --- 待機圖 (佔螢幕 75%) ---
+        # --- 待機圖 (佔螢幕 50%) ---
         path_standby = os.path.join(BASE_DIR, "copyright_2.jpg")
-        target_h_standby = int(screen_h * 0.75) 
+        target_h_standby = int(screen_h * 0.50) 
         # 呼叫工具函式計算 copyright_2 的寬度
         self.img_standby, self.standby_w = get_resized_image(path_standby, target_h_standby)
         self.standby_h = target_h_standby
@@ -469,7 +468,7 @@ class OLuLuSystem(tk.Tk):
         self.refresh_all_buttons()
         self.update_chart_display()
 
-    # ------------------ 介面佈局設計 ------------------
+    # ------------------ 介面佈局設計（共通） ------------------
     def setup_ui(self):
         """初始化並排版所有的 UI 元件"""
         t = self.theme
@@ -511,7 +510,7 @@ class OLuLuSystem(tk.Tk):
 
         # 底部按鈕區，固定在最下方，高度為 40px；先不 pack 按鈕以維持淨空
         self.bottom_frame = tk.Frame(self.left_card, bg=t["bg_card"], height=40)
-        self.bottom_frame.pack_propagate(False) # 關鍵：強制鎖定高度，不隨內容縮放
+        self.bottom_frame.pack_propagate(False) # 強制鎖定高度，不隨內容縮放
         self.bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(0, 10))
         
         self.btn_toggle_time = tk.Button(self.bottom_frame, text="切換: 目前顯示 60 分鐘", 
@@ -594,7 +593,7 @@ class OLuLuSystem(tk.Tk):
         self.view_minutes = 480 if self.view_minutes == 60 else 60
         self.btn_toggle_time.config(text=f"切換: 目前顯示 {self.view_minutes} 分鐘")
         self.update_chart_display()
-
+#=============================(以下BROKER專用）===============================
     def on_bed_click(self, bed_name):
         """處理右側床位按鈕的點擊事件"""
         self.current_viewing_bed = bed_name
@@ -607,7 +606,7 @@ class OLuLuSystem(tk.Tk):
             self.btn_toggle_time.pack(side=tk.LEFT, padx=10)
             self.btn_logout.pack(side=tk.RIGHT, padx=10)
             self.update_chart_display()
-
+#=============================(以上BROKER專用）===============================
     def show_login_dialog(self, bed_name):
         """彈出登錄病歷與選擇感測器的對話框"""
         # 篩選出目前在線上，且尚未被其他床位綁定的感測器 ID
@@ -696,7 +695,7 @@ class OLuLuSystem(tk.Tk):
             else:
                 self.canvas.create_text(w/2, h/2, text="點選床位按鈕以查看資料\n\n(找不到開機圖檔 copyright_1.jpg）", fill=t["text_light"], font=("Arial", 16), justify=tk.CENTER)
             return
-
+        
         #已有登錄
         # ---------------- 上方文字資訊列 ----------------
         bed = self.beds[self.current_viewing_bed]
@@ -829,7 +828,7 @@ class OLuLuSystem(tk.Tk):
                     current_line_segment.extend([x, y])
                     current_poly_segment.extend([x, y])
                     
-                    # 低水位時畫圓點
+                    # 一般量，加畫圓點
                     if view_len <= 120 and current_max_weight <= 500:
                         self.canvas.create_oval(x-3, y-3, x+3, y+3, fill=current_line_color, outline="")
                 else:
@@ -983,8 +982,9 @@ class OLuLuSystem(tk.Tk):
             else:
                 btn.config(text=f"○ {name}\n(空床)", fg=t["text_light"], bg=t["bg_main"])
 
-    # ------------------ 設定檔讀寫 ------------------
+    # ------------------ 設定檔讀寫（BROKER) ------------------
     def save_config(self):
+        
         """將目前的床位綁定狀態存入 JSON 檔"""
         try:
             with open(CONFIG_FILE, "w", encoding='utf-8') as f:
