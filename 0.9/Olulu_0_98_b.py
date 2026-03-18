@@ -1,8 +1,8 @@
 print('===============================================================')
-print('      %%%%%   %%        %%             OLuLu Broker    ')
-print('    %%     %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2026.')   
-print('    %%     %% %% %% %%  %% %% %%       [物聯網核心] 純背景伺服器版   ')
-print('      %%%%%   %%  %%%%% %%  %%%%%     Target OS: windows')
+print('     %%%%%  %%        %%             OLuLu Broker    ')
+print('    %%   %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2026.')   
+print('    %%   %% %% %% %%  %% %% %%       [物聯網核心] 背景伺服器版   ')
+print('     %%%%%  %%  %%%%% %%  %%%%%     Target OS: windows')
 print('===============================================================')
 import subprocess
 import os
@@ -212,7 +212,7 @@ class HLBroker:
         """每 30 分鐘集中處理一次所有床位的檔案寫入"""
         while True:
             # 這裡設定等待時間 (例如 1800 秒 = 30 分鐘)，但可被事件喚醒
-            time.sleep(1800)
+            self.flush_event.wait(1800)
             self.flush_event.clear() # 醒來後把鬧鐘重置
             if self.write_buffer.empty():
                 continue # 如果被叫醒但其實沒資料，就繼續下一輪            
@@ -318,10 +318,10 @@ class HLBroker:
                     elif topic == "olulu/system/req_history":
                         bed_name = payload
                         if bed_name in self.beds and self.beds[bed_name].patient_id:
+                            # 直接把記憶體裡的歷史紀錄轉成 JSON 發布出去
                             history_payload = json.dumps(self.beds[bed_name].history)
                             self.client.publish(f"olulu/system/res_history/{bed_name}", history_payload)
-                            print(f"[通訊] 傳送 {bed_name} ({self.beds[bed_name].patient_id}) 歷史資料給前端。")
-
+                            print(f"🚀 [快取派發] 已將 {bed_name} 記憶體資料 ({len(self.beds[bed_name].history)}筆) 秒傳給 Mi。")
                     elif topic == "olulu/system/req_bind":
                         data = json.loads(payload)
                         req_sensor = data["sensor_id"]
@@ -359,6 +359,11 @@ class HLBroker:
                             self.client.publish("olulu/system/state_update", json.dumps(config_data))
                             print(f"[成功] 床位 {bed_name} 已登出 (原病人: {patient_id})")
 
+                    # 🟢 備用機制：強制存檔 (留著以備不時之需)
+                    elif topic == "olulu/system/force_flush":
+                        print("[系統] 收到強制存檔請求，正在喚醒存檔執行緒...")
+                        self.flush_event.set()
+                        
                 self.work_queue.task_done()
             except Exception as e: 
                 print(f"[錯誤] 背景佇列處理異常: {e}")
