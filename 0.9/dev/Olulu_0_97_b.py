@@ -1,8 +1,8 @@
 print('===============================================================')
-print('      %%%%%  %%        %%             OLuLu Headless Broker    ')
+print('     %%%%%  %%        %%             OLuLu Broker    ')
 print('    %%   %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2026.')   
 print('    %%   %% %% %% %%  %% %% %%       [物聯網核心] 純背景伺服器版   ')
-print('      %%%%%  %%  %%%%% %%  %%%%%     Target OS: windows')
+print('     %%%%%  %%  %%%%% %%  %%%%%     Target OS: windows')
 print('===============================================================')
 import subprocess
 import os
