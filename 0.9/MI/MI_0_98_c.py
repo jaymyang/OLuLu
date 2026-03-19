@@ -10,7 +10,7 @@ FREQUENCY_OPTIONS = [1, 2, 4, 8]
 class MiStandaloneController(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("MI 報表通報系統 (獨立控制台)")
+        self.title("MI 報表通報系統控制台")
         self.geometry("650x500")
         self.configure(bg="#F5F7FA")
         
