@@ -1,8 +1,9 @@
 print('===============================================================')
 print('     %%%%%  %%        %%              OLuLu Broker+Flask server    ')
-print('    %%   %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2026.')   
+print('    %%   %% %%        %%          Copyright Jay Ming-chieh Yang 2026.')   
 print('    %%   %% %% %% %%  %% %% %%       [物聯網核心伺服器]  ')
-print('     %%%%%  %%  %%%%% %%  %%%%%     Target OS: Windows/Linux')
+print('    %%   %% %% %% %%  %% %% %%       Target OS: Windows/Linux')
+print('     %%%%%  %%  %%%%% %%  %%%%%     ')
 print('===============================================================')
 
 import subprocess
@@ -157,7 +158,7 @@ MAIN_HTML_TEMPLATE = """
                 data: {
                     labels: bedData.times,
                     datasets: [{
-                        label: '重量 (g/ml)',
+                        label: '重量 (g)',
                         data: bedData.weights,
                         borderColor: '#FF9F43',
                         backgroundColor: 'rgba(255, 159, 67, 0.2)',
