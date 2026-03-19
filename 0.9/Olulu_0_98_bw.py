@@ -1,9 +1,9 @@
 print('===============================================================')
-print('     %%%%%  %%        %%              OLuLu Broker+Flask server    ')
-print('    %%   %% %%        %%          Copyright Jay Ming-chieh Yang 2026.')   
-print('    %%   %% %% %% %%  %% %% %%       [物聯網核心伺服器]  ')
-print('    %%   %% %% %% %%  %% %% %%       Target OS: Windows/Linux')
-print('     %%%%%  %%  %%%%% %%  %%%%%     ')
+print('     @@@@@   @@          @@              OLuLu Broker+Flask server    ')
+print('    @@   @@  @@  @@  @@  @@  @@  @@  Copyright Jay Ming-chieh Yang 2026.')   
+print('    @@   @@  @@  @@  @@  @@  @@  @@       [物聯網核心伺服器]  ')
+print('    @@   @@  @@  @@  @@  @@  @@  @@       Target OS: Windows/Linux')
+print('     @@@@@   @@    @@@@@ @@    @@@@@     ')
 print('===============================================================')
 
 import subprocess
