@@ -1,4 +1,12 @@
-#2026/03/18
+#2026/03/21 - MI 整合服務版 (Background + Web Controller)
+print('===============================================================')
+print('     %%%%%  %%        %%              MI Integrated Service  ')
+print('    %%   %% %% %% %%  %% %% %%    Copyright Jay Ming-chieh Yang 2026.')   
+print('    %%   %% %% %% %%  %% %% %%        [郵件報表整合通報系統] ver 2.0')
+print('    %%   %% %% %% %%  %% %% %%')
+print('     %%%%%  %%  %%%%% %%  %%%%%')
+print('===============================================================')
+
 import os
 import json
 import csv
@@ -8,40 +16,305 @@ import urllib.parse
 import requests
 import smtplib
 import ssl
+import queue
+import io
+# ... 其他 import ...
 from datetime import datetime, timedelta 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 import paho.mqtt.client as mqtt
 from PIL import Image, ImageDraw
-import io
-import queue
+import logging
+from flask import Flask, render_template_string, jsonify, request
 
 # ================= 系統與憑證設定 =================
-SENDER_EMAIL = "jjsamsungcb@gmail.com"
-SENDER_PASSWORD = "rlyqygxwgxejgegm"
-RECEIVER_EMAIL = "jjsamsungcb@gmail.com"
+SENDER_EMAIL = "用來寄信的email信箱"
+SENDER_PASSWORD = "用來寄信的密碼"
+RECEIVER_EMAIL = "收信者email"
 
-# LINE API 憑證 
-LINE_CHANNEL_ACCESS_TOKEN = "fb+0bW2xkpejbrEFMsKsopo4+yE71K28CxmhuEXaMzsFOdLTv61ECfALMbIodVPiM1/6HqJVuBEjd6gd/ek/AYnxz2KcGWSmtvajeYVkjJ5w5UQORJYZBv5HDC+9V2fLlG6IeLJMpPqkO1lU7pVwsgdB04t89/1O/w1cDnyilFU="
-LINE_USER_ID = "U32dc2a587bc124f784a0457352652624"
-# Telegram API 憑證
-TG_BOT_TOKEN = "8748477838:AAF4s75BTFS2e9xKSqEMIZOF6uS_AHB8eU4"
-TG_CHAT_ID = "8777236897"
+# LINE API 憑證 (暫停使用)
+LINE_CHANNEL_ACCESS_TOKEN = "YOUR_LINE_TOKEN"
+LINE_USER_ID = "YOUR_LINE_ID"
+# Telegram API 憑證 (暫停使用)
+TG_BOT_TOKEN = "YOUR_TG_TOKEN"
+TG_CHAT_ID = "YOUR_TG_ID"
 
 BROKER_IP = "localhost"
+BROKER_PORT = 1883
+WEB_PORT = 5001          # MI 系統網頁專用 Port 號
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(BASE_DIR, "bed_config.json")
 SCHEDULE_FILE = os.path.join(BASE_DIR, "mi_schedule.json")
 
-# 排程記憶體快取 (減少硬碟讀取)
-CURRENT_SCHEDULE = {"interval": 1, "scheduled_patients": []}
-# 用來接收 OLuLu 歷史資料的回傳信箱
+# ================= 全域變數與快取 =================
+app = Flask(__name__)
+
+# 讓 Flask (Werkzeug) 只顯示 Error 等級的紀錄
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+
+def load_mi_schedule():
+    """從硬碟讀取排程設定"""
+    if os.path.exists(SCHEDULE_FILE):
+        try:
+            with open(SCHEDULE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception: pass
+    return {"interval": 1, "scheduled_patients": []}
+
+CURRENT_SCHEDULE = load_mi_schedule()
 MQTT_RESPONSE_QUEUES = {}
 
 
+# 網頁端顯示用的系統狀態
+system_state = {
+    "beds_data": {},
+    "schedule": CURRENT_SCHEDULE
+}
+
+# ================= 網頁前端 HTML 模板 =================
+MI_HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>MI 報表通報系統</title>
+    <style>
+        body { 
+            font-family: 'Microsoft JhengHei UI', Arial, sans-serif; 
+            margin: 0; padding: 20px; 
+            background-color: #F5F7FA;
+            background-image: url('/static/copyright_mi.jpg');
+            background-size: contain; 
+            background-repeat: no-repeat; 
+            background-position: center; 
+            background-attachment: fixed;
+        }
+        .container { 
+            max-width: 800px; margin: auto; 
+            background: rgba(255, 255, 255, 0.92); 
+            padding: 25px; border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+            backdrop-filter: blur(5px);
+        }
+        h2 { color: #333; text-align: center; margin-top: 0; border-bottom: 2px solid #20B2AA; padding-bottom: 10px;}
+        
+        .top-bar { display: flex; align-items: center; justify-content: space-between; background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .top-bar select { font-size: 16px; padding: 5px 10px; border-radius: 5px; }
+        .btn-save { background: #4CAF50; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; font-weight: bold;}
+        
+        .transfer-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; align-items: stretch; margin-bottom: 20px;}
+        .list-box { flex: 1; min-width: 250px; display: flex; flex-direction: column; }
+        .list-box h3 { margin: 0 0 10px 0; font-size: 16px; color: #555; text-align: center; padding: 8px; border-radius: 5px;}
+        .list-avail h3 { background: #DEFFAC; }
+        .list-selected h3 { background: #F2E6E6; }
+        select[multiple] { width: 100%; flex-grow: 1; min-height: 250px; font-size: 16px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-family: Consolas, monospace;}
+        
+        .controls { display: flex; flex-direction: column; justify-content: center; gap: 10px; min-width: 120px; }
+        .controls button { background: #6c757d; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px;}
+        .controls button:hover { background: #5a6268; }
+        
+        .bottom-bar { display: flex; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #ddd; }
+        .btn-manual { background: #FF5252; color: white; border: none; padding: 12px 25px; font-size: 16px; border-radius: 5px; cursor: pointer; font-weight: bold;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📧 MI 報表通報系統 (網頁控制台)</h2>
+        
+        <div class="top-bar">
+            <div>
+                <label style="font-weight: bold; font-size: 16px;">自動寄送頻率：</label>
+                <select id="intervalSelect" onchange="applySchedule()">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="4">4</option>
+                    <option value="8">8</option>
+                </select>
+                <label style="font-size: 16px;"> 小時</label>
+            </div>
+            <button class="btn-save" onclick="applySchedule()">儲存並套用</button>
+        </div>
+
+        <div class="transfer-container">
+            <div class="list-box list-avail">
+                <h3>目前在床病人</h3>
+                <select id="availList" multiple></select>
+            </div>
+            
+            <div class="controls">
+                <button onclick="moveItems('availList', 'selectedList')">加入 &gt;</button>
+                <button onclick="moveItems('selectedList', 'availList')">&lt; 移除</button>
+                <button onclick="moveAll('availList', 'selectedList')">全部加入 &gt;&gt;</button>
+                <button onclick="moveAll('selectedList', 'availList')">&lt;&lt; 全部移除</button>
+            </div>
+            
+            <div class="list-box list-selected">
+                <h3>已加入定時傳送名單</h3>
+                <select id="selectedList" multiple></select>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <button class="btn-manual" onclick="triggerManual()">立即手動寄出 (不影響排程)</button>
+        </div>
+    </div>
+
+    <script>
+        let lastStateString = "";
+
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/state');
+                const state = await res.json();
+                
+                const stateString = JSON.stringify(state);
+                if (stateString === lastStateString) return;
+                lastStateString = stateString;
+
+                document.getElementById('intervalSelect').value = state.schedule.interval;
+
+                let activeItems = [];
+                for (const [bed, info] of Object.entries(state.beds_data)) {
+                    if (info.patient_id) {
+                        activeItems.push(`[${bed}] ${info.patient_id}`);
+                    }
+                }
+
+                const scheduledPids = state.schedule.scheduled_patients || [];
+                
+                const availList = document.getElementById('availList');
+                const selectedList = document.getElementById('selectedList');
+                availList.innerHTML = '';
+                selectedList.innerHTML = '';
+
+                activeItems.forEach(item => {
+                    const pid = item.split("] ")[1];
+                    const option = document.createElement('option');
+                    option.value = pid;
+                    option.text = item;
+                    
+                    if (scheduledPids.includes(pid)) {
+                        selectedList.appendChild(option);
+                    } else {
+                        availList.appendChild(option);
+                    }
+                });
+            } catch (error) { console.error("無法連線至伺服器", error); }
+        }
+
+        function moveItems(sourceId, targetId) {
+            const src = document.getElementById(sourceId);
+            const tgt = document.getElementById(targetId);
+            Array.from(src.selectedOptions).forEach(option => { tgt.appendChild(option); });
+            applySchedule(true); 
+        }
+
+        function moveAll(sourceId, targetId) {
+            const src = document.getElementById(sourceId);
+            const tgt = document.getElementById(targetId);
+            Array.from(src.options).forEach(option => { tgt.appendChild(option); });
+            applySchedule(true); 
+        }
+
+        async function applySchedule(silent = false) {
+            const interval = parseInt(document.getElementById('intervalSelect').value);
+            const selectedList = document.getElementById('selectedList');
+            const scheduledPatients = Array.from(selectedList.options).map(opt => opt.value);
+
+            const payload = { interval: interval, scheduled_patients: scheduledPatients };
+            
+            try {
+                await fetch('/api/schedule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                lastStateString = ""; 
+                fetchState();
+                
+                if (!silent) alert(`排程已更新！\\n目前設定為每 ${interval} 小時自動寄送一次。`);
+            } catch (e) { alert("套用失敗，請檢查連線！"); }
+        }
+
+        async function triggerManual() {
+            const selectedList = document.getElementById('selectedList');
+            const scheduledPatients = Array.from(selectedList.options).map(opt => opt.value);
+            
+            if (scheduledPatients.length === 0) {
+                alert("請先將病患加入右側名單！"); return;
+            }
+
+            if (!confirm("確定要立即收集右側名單的資料並寄出嗎？")) return;
+
+            try {
+                const response = await fetch('/api/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_patients: scheduledPatients })
+                });
+                const result = await response.json();
+                alert(result.message);
+            } catch (e) { alert("傳送指令失敗！"); }
+        }
+
+        fetchState();
+        setInterval(fetchState, 5000);
+    </script>
+</body>
+</html>
+"""
+
+# ================= 網頁後端 API =================
+@app.route('/')
+def index():
+    return render_template_string(MI_HTML_TEMPLATE)
+
+@app.route('/api/state', methods=['GET'])
+def get_state():
+    """提供前端：目前全區床位狀態與最新 MI 排程"""
+    system_state["schedule"] = CURRENT_SCHEDULE
+    return jsonify(system_state)
+
+@app.route('/api/schedule', methods=['POST'])
+def set_schedule():
+    """接收前端：使用者更改了排程頻率或名單"""
+    global CURRENT_SCHEDULE
+    data = request.json
+    CURRENT_SCHEDULE = data
+    system_state["schedule"] = data
+    
+    # 直接寫入硬碟
+    with open(SCHEDULE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+        
+    # 透過 MQTT 廣播給其他可能有監聽的服務 (保持相容性)
+    mqtt_client.publish("olulu/mi/schedule_update", json.dumps(data))
+    return jsonify({"status": "success"})
+
+@app.route('/api/trigger', methods=['POST'])
+def trigger_report():
+    """接收前端：手動立即通報"""
+    data = request.json
+    target_patients = data.get("target_patients", [])
+    current_interval = CURRENT_SCHEDULE.get("interval", 1)
+    
+    if target_patients:      # 直接呼叫背景寄信函數！
+        print(f"\n [網頁觸發] 收到通報請求，名單: {target_patients}，抓取過去 {current_interval} 小時資料")
+        threading.Thread(
+            target=execute_combined_report, 
+            args=(mqtt_client, target_patients, RECEIVER_EMAIL, current_interval),
+            daemon=True
+        ).start()
+        
+    return jsonify({"status": "success", "message": "手動通報指令已傳送至背景處理！"})
+
+# ================= 繪圖與寄信工具 =================
 def generate_local_chart_bytes(pid, times_str_list, weights, interval_minutes):
-    """純本地端在記憶體中繪製折線圖，X軸為絕對時間比例，Y軸固定0-500"""
     width, height = 600, 350
     img = Image.new('RGB', (width, height), color='#FFFFFF')
     draw = ImageDraw.Draw(img)
@@ -57,48 +330,36 @@ def generate_local_chart_bytes(pid, times_str_list, weights, interval_minutes):
     plot_w = width - pad_x * 2
     plot_h = height - pad_y * 2
 
-    # 繪製 Y 軸的 3 條水平基準線與數字
     for y_val in [0, 250, 500]:
         y_pos = height - pad_y - ((y_val - min_w) / y_range) * plot_h
         draw.line([(pad_x, y_pos), (width - pad_x, y_pos)], fill="#EEEEEE", width=1)
         draw.text((pad_x - 30, y_pos - 5), str(y_val), fill="#888888")
 
-    # 繪製外框底線
     draw.line([(pad_x, pad_y), (pad_x, height - pad_y)], fill="#CCCCCC", width=2)
     draw.line([(pad_x, height - pad_y), (width - pad_x, height - pad_y)], fill="#CCCCCC", width=2)
 
     info_text = f"Target: Last {interval_minutes} Mins | Actual Data Points: {len(weights)}"
     draw.text((pad_x + 10, pad_y + 10), info_text, fill="#555555")
 
-    # 🚀 建立絕對時間尺規
-    # 假設最右邊(終點)是「現在」，最左邊(起點)是「interval_minutes 分鐘前」
     end_time = datetime.now()
     start_time = end_time - timedelta(minutes=interval_minutes)
 
     points = []
     for i in range(len(weights)):
         try:
-            # 將字串轉換回 datetime 物件
             t_str = times_str_list[i].replace("/", "-")
             row_time = datetime.strptime(t_str[:16], "%Y-%m-%d %H:%M")
-            
-            # 計算這個時間點，落在整段時間軸的百分比 (0.0 到 1.0 之間)
             time_diff_seconds = (row_time - start_time).total_seconds()
             total_seconds = interval_minutes * 60
             x_ratio = time_diff_seconds / total_seconds
-            
-            # 確保點不會畫到圖表外面去
             x_ratio = max(0.0, min(1.0, x_ratio))
             
             x = pad_x + (x_ratio * plot_w)
             w_capped = min(max(weights[i], 0), 500)
             y = height - pad_y - ((w_capped - min_w) / y_range) * plot_h
             points.append((x, y))
-            
-        except ValueError:
-            continue # 時間格式無法判讀就跳過
+        except ValueError: continue
 
-    # 畫橘色折線與圓點
     if len(points) > 1:
         draw.line(points, fill="#FF9F43", width=2)
     for x, y in points:
@@ -109,7 +370,6 @@ def generate_local_chart_bytes(pid, times_str_list, weights, interval_minutes):
     return buf.getvalue()
 
 
-# ================= email 通報 =================
 def process_email_report(patient_ids, receiver_email, collected_data, interval_hours, bed_mapping):
     msg = MIMEMultipart('related')
     msg["from"] = SENDER_EMAIL
@@ -131,28 +391,25 @@ def process_email_report(patient_ids, receiver_email, collected_data, interval_h
         data = collected_data.get(pid, [])
         bed_name = bed_mapping.get(pid, "未知床位") 
         
-        html_content += f"<div style='margin-top: 30px;'><h3>👉 床位: {bed_name}</h3>"
+        html_content += f"<div style='margin-top: 30px;'><h3> 床位: {bed_name}</h3>"
         
         if not data:
             html_content += f"<p style='color: red;'>此床位於過去 {interval_minutes} 分鐘內無歷史資料。</p></div>"
             continue
 
-        # 把完整的 "YYYY-MM-DD HH:MM" 傳給畫圖函式
         times = [item[0][:16] for item in data] 
         weights = [item[1] for item in data]
 
         try:
             img_bytes = generate_local_chart_bytes(pid, times, weights, interval_minutes)
             img_cid = f"chart_{pid}" 
-            
             html_content += f"<img src='cid:{img_cid}' style='width: 100%; max-width: 600px; border: 1px solid #ddd; border-radius: 5px;'><br></div>"
             
             img_attachment = MIMEImage(img_bytes, _subtype='png')
             img_attachment.add_header('Content-ID', f'<{img_cid}>')
             images_to_attach.append(img_attachment)
-                
         except Exception as e:
-            html_content += f"<p style='color: red;'>⚠️ 本地圖表繪製失敗: {e}</p></div>"
+            html_content += f"<p style='color: red;'>本地圖表繪製失敗: {e}</p></div>"
 
     html_content += "<p style='color: #888; font-size: 12px; margin-top: 40px;'>※ 系統自動發送信件</p></div></body></html>"
     
@@ -172,178 +429,7 @@ def process_email_report(patient_ids, receiver_email, collected_data, interval_h
     except Exception as e:
         return False, f"Email 寄信失敗: {e}"
 
-
-# ================= 2. LINE QuickChart 快速通報，因聯外繪圖不穩，目前停用 =================
-#def process_line_report(bed_name, history_data):
-#    if not history_data: return False, "無歷史資料"
-#        
-#    step = max(1, len(history_data) // 30)
-#    sampled_data = history_data[::step]
-#    
-#    times = [item[0][-5:] for item in sampled_data]
-#    weights = [item[1] for item in sampled_data]
-#
-#    chart_config = {
-#        "type": "line",
-#        "data": {
-#            "labels": times,
-#            "datasets": [{"label": "Weight (g/ml)", "data": weights, "borderColor": "rgb(54, 162, 235)", "fill": False}]
-#        }
-#    }
-#    encoded_config = urllib.parse.quote(json.dumps(chart_config))
-#    image_url = f"https://quickchart.io/chart?c={encoded_config}&w=600&h=400"
-#
-#    url = "https://api.line.me/v2/bot/message/push"
-#    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"}
-#    payload = {
-#        "to": LINE_USER_ID,
-#        "messages": [
-#            {"type": "text", "text": f"🏥 OLuLu 即時通報\n床位 [{bed_name}] 最新重量趨勢："},
-#        ]
-#    }
-#    try:
-#        response = requests.post(url, headers=headers, data=json.dumps(payload))
-#        if response.status_code == 200:
-#            return True, "LINE 發送成功"
-#        else:
-#            return False, f"LINE 拒絕發送 (代碼 {response.status_code}): {response.text}"
-#    except Exception as e: 
-#        return False, f"LINE 連線錯誤: {e}"
-
-
-# ================= 3. Telegram ASCII 通報，因暫時無法解決機器人發訊問題，停用中 =================
-#def process_telegram_report(bed_name, history_data):
-#    if not history_data: return False, "無歷史資料"
-
-#    step = max(1, len(history_data) // 15)
-#    sampled_data = history_data[::step][-15:] 
-    
-#    weights = [item[1] for item in sampled_data]
-#    max_w = max(weights) if weights else 1
-#    if max_w == 0: max_w = 1 
-    
-#    max_bars = 15 
-#    ascii_lines = []
-#    for t, w in sampled_data:
-#        time_str = t[-5:] 
-#        bar_len = int((w / max_w) * max_bars) if w > 0 else 0
-#        bar_str = "█" * bar_len
-#        ascii_lines.append(f"{time_str} | {bar_str:<{max_bars}} {w}g")
-
-#    ascii_chart = "\n".join(ascii_lines)
-#    message_text = f"🚨 OLuLu 即時通報\n床位 [{bed_name}] 最新重量趨勢：\n<pre>{ascii_chart}</pre>"
-
-#    url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
-#    payload = {
-#        "chat_id": TG_CHAT_ID,
-#        "text": message_text,
-#        "parse_mode": "HTML" 
-#    }
-
-#    try:
-#        response = requests.post(url, json=payload, timeout=10)
-#        return response.status_code == 200, "Telegram 發送成功"
-#    except Exception as e: 
-#        return False, f"Telegram 發送失敗: {e}"
-    
-
-# ================= 核心：資料讀取與通報中樞 =================
-# 🟢 記得加上 mqtt_client 參數
-def execute_combined_report(mqtt_client, patient_ids, email_address, interval_hours=1):
-    collected_data = {}
-    cutoff_time = datetime.now() - timedelta(hours=interval_hours)
-    bed_mapping = get_pid_to_bed_mapping()
-    
-    for pid in patient_ids:
-        bed_name = bed_mapping.get(pid)
-        if not bed_name: continue
-        
-        final_history = []
-        
-        # ==========================================
-        # 1. 建立專屬信箱，並發出 req_history 請求
-        # ==========================================
-        q = queue.Queue()
-        MQTT_RESPONSE_QUEUES[bed_name] = q 
-        
-        # 🟢 核心動作：要求 OLuLu 交出記憶體資料
-        mqtt_client.publish("olulu/system/req_history", bed_name)
-        
-        try:
-            # 原地等待，最多等 3 秒
-            memory_data = q.get(timeout=3.0)
-            print(f" -> ⚡ [快取成功] 零延遲取得 {bed_name} 記憶體資料 ({len(memory_data)} 筆)")
-            
-            # 篩選我們需要的時間範圍
-            for item in memory_data:
-                time_str = item[0].replace("/", "-")
-                row_time = datetime.strptime(time_str[:16], "%Y-%m-%d %H:%M")
-                if row_time >= cutoff_time:
-                    final_history.append((item[0], float(item[1])))
-                    
-        except queue.Empty:
-            print(f" -> ⚠️ [快取超時] 等不到 {bed_name} 的資料，改讀硬碟 CSV。")
-            memory_data = [] 
-            
-        finally:
-            # 用完就把信箱拆了
-            if bed_name in MQTT_RESPONSE_QUEUES:
-                del MQTT_RESPONSE_QUEUES[bed_name]
-
-        # ==========================================
-        # 2. 如果快取不夠或失敗，備援去讀 CSV
-        # ==========================================
-        need_csv_fallback = False
-        if not memory_data:
-            need_csv_fallback = True
-        else:
-            # 檢查快取中最舊的那筆資料，是不是還比我們要求的時間新？
-            # 如果是，代表快取長度不夠，必須去 CSV 找更舊的資料
-            oldest_time = datetime.strptime(memory_data[0][0].replace("/", "-")[:16], "%Y-%m-%d %H:%M")
-            if oldest_time > cutoff_time:
-                need_csv_fallback = True
-
-        if need_csv_fallback:
-            filename = os.path.join(BASE_DIR, f"{pid}.csv")
-            if os.path.exists(filename):
-                print(f" -> 💽 [硬碟讀取] 正在調閱 {pid}.csv 補齊資料...")
-                try:
-                    with open(filename, "r", encoding="utf-8") as f:
-                        reader = csv.reader(f)
-                        for row in reader:
-                            if len(row) >= 2 and row[0].strip() != "Time":
-                                try:
-                                    time_str = row[0].strip().replace("/", "-")
-                                    row_time = datetime.strptime(time_str[:16], "%Y-%m-%d %H:%M")
-                                    
-                                    # 🟢 確保不要把已經在快取裡的資料重複加進來
-                                    is_in_memory = any(m[0] == row[0].strip() for m in memory_data)
-                                    if row_time >= cutoff_time and not is_in_memory:
-                                        final_history.append((row[0].strip(), float(row[1])))
-                                except ValueError: pass
-                except Exception as e: print(f"讀取 CSV 失敗: {e}")
-                
-                final_history.sort(key=lambda x: x[0]) # 重新照時間排序
-
-        collected_data[pid] = final_history
-
-    # ==========================================
-    # 3. 執行原本的畫圖與寄信
-    # ==========================================
-    print(f" -> 正在生成並寄送 HTML 圖表 Email...")
-    email_success, email_reason = process_email_report(patient_ids, email_address, collected_data, interval_hours, bed_mapping) 
-    print(f" -> {email_reason}")
-    
-    #for pid in patient_ids: #如上，暫時停用
-    #    bed_name = bed_mapping.get(pid, "未知床位") 
-    #    line_success, line_reason = process_line_report(bed_name, collected_data[pid])
-    #    print(f" -> [LINE] 床位 {bed_name}: {line_reason}") 
-    #    
-    #    tg_success, tg_reason = process_telegram_report(bed_name, collected_data[pid])
-    #    print(f" -> [Telegram] 床位 {bed_name}: {tg_reason}")
-
-
-# ================= 獲取病床與病人基本資料=================
+# ================= 資料處理核心 =================
 def get_active_patients():
     active_pids = []
     if not os.path.exists(CONFIG_FILE): return active_pids
@@ -364,130 +450,201 @@ def get_pid_to_bed_mapping():
                 data = json.load(f)
                 for bed_name, info in data.items():
                     pid = info.get("patient_id")
-                    if pid:
-                        mapping[pid] = bed_name
+                    if pid: mapping[pid] = bed_name
         except Exception: pass
     return mapping
 
-
-# ================= 自動定時器與 MQTT 監聽 =================
-def load_mi_schedule():
-    """從硬碟讀取排程設定 (僅啟動時呼叫一次)"""
-    if os.path.exists(SCHEDULE_FILE):
-        try:
-            with open(SCHEDULE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception: pass
-    return {"interval": 1, "scheduled_patients": []}
-
-
-def auto_timer_worker():
-    """優化後的定時器：使用 Flag 控制與記憶體快取"""
-    global CURRENT_SCHEDULE
-    CURRENT_SCHEDULE = load_mi_schedule()
-    has_sent_this_hour = False
+def execute_combined_report(client_obj, patient_ids, email_address, interval_hours=1):
+    collected_data = {}
+    cutoff_time = datetime.now() - timedelta(hours=interval_hours)
+    bed_mapping = get_pid_to_bed_mapping()
     
-    print("⏳ [定時器] 優化版啟動，背景監控中...")
+    for pid in patient_ids:
+        bed_name = bed_mapping.get(pid)
+        if not bed_name: continue
+        
+        final_history = []
+        q = queue.Queue()
+        MQTT_RESPONSE_QUEUES[bed_name] = q 
+        
+        # 要求 OLuLu 交出記憶體資料
+        client_obj.publish("olulu/system/req_history", bed_name)
+        
+        try:
+            memory_data = q.get(timeout=3.0)
+            print(f" -> [快取成功] 零延遲取得 {bed_name} 記憶體資料 ({len(memory_data)} 筆)")
+            for item in memory_data:
+                time_str = item[0].replace("/", "-")
+                row_time = datetime.strptime(time_str[:16], "%Y-%m-%d %H:%M")
+                if row_time >= cutoff_time:
+                    final_history.append((item[0], float(item[1])))
+        except queue.Empty:
+            print(f" ->  [快取超時] 等不到 {bed_name} 的資料，改讀硬碟 CSV。")
+            memory_data = [] 
+        finally:
+            if bed_name in MQTT_RESPONSE_QUEUES:
+                del MQTT_RESPONSE_QUEUES[bed_name]
+
+        need_csv_fallback = False
+        if not memory_data:
+            need_csv_fallback = True
+        else:
+            oldest_time = datetime.strptime(memory_data[0][0].replace("/", "-")[:16], "%Y-%m-%d %H:%M")
+            if oldest_time > cutoff_time:
+                need_csv_fallback = True
+
+        if need_csv_fallback:
+            filename = os.path.join(BASE_DIR, f"{pid}.csv")
+            if os.path.exists(filename):
+                print(f" ->  [硬碟讀取] 正在調閱 {pid}.csv 補齊資料...")
+                try:
+                    with open(filename, "r", encoding="utf-8") as f:
+                        reader = csv.reader(f)
+                        for row in reader:
+                            if len(row) >= 2 and row[0].strip() != "Time":
+                                try:
+                                    time_str = row[0].strip().replace("/", "-")
+                                    row_time = datetime.strptime(time_str[:16], "%Y-%m-%d %H:%M")
+                                    
+                                    is_in_memory = any(m[0] == row[0].strip() for m in memory_data)
+                                    if row_time >= cutoff_time and not is_in_memory:
+                                        final_history.append((row[0].strip(), float(row[1])))
+                                except ValueError: pass
+                except Exception as e: print(f"讀取 CSV 失敗: {e}")
+                
+                final_history.sort(key=lambda x: x[0]) 
+
+        collected_data[pid] = final_history
+
+    print(f" -> 正在生成並寄送 HTML 圖表 Email...")
+    email_success, email_reason = process_email_report(patient_ids, email_address, collected_data, interval_hours, bed_mapping) 
+    print(f" -> {email_reason}")
+
+# ================= 自動定時器 =================
+def auto_timer_worker(client_obj):
+    print(" [定時器] 整合版已啟動，背景監控中...")
+    has_sent_this_hour = False
     
     while True:
         now = datetime.now()
         interval = CURRENT_SCHEDULE.get("interval", 1)
         scheduled_patients = CURRENT_SCHEDULE.get("scheduled_patients", [])
 
-        # 條件：小時能整除、分鐘為 01
         if now.hour % interval == 0 and now.minute == 1:
             if not has_sent_this_hour:
-                print(f"\n⏰ [排程觸發] 時間：{now.strftime('%H:%M:%S')} (頻率: {interval}H)")
+                print(f"\n [排程觸發] 時間：{now.strftime('%H:%M:%S')} (頻率: {interval}H)")
                 
                 active_patients = get_active_patients()
                 valid_targets = [p for p in scheduled_patients if p in active_patients]
                 
                 if valid_targets: 
-                    execute_combined_report(mqtt_client,valid_targets, RECEIVER_EMAIL, interval_hours=interval)
+                    execute_combined_report(client_obj, valid_targets, RECEIVER_EMAIL, interval_hours=interval)
                 else: 
                     print(" -> 目前排程中的病患均已離線，跳過本次通報。")
                     
-                has_sent_this_hour = True # 上鎖，避免本分鐘內重複執行
+                has_sent_this_hour = True
                 
-        # 過了 01 分，把鎖解開，準備下一次觸發
         elif now.minute != 1:
             has_sent_this_hour = False
             
-        time.sleep(30) # 保持 30 秒迴圈即可，沒有硬碟 I/O 負擔極輕
+        time.sleep(30) 
 
-
+# ================= MQTT 通訊 =================
 def on_connect(client, userdata, flags, reason_code, properties=None):
-    print("✅ MI 背景通報服務已連線，等待手動指令...")
-    client.subscribe("olulu/mi/req_report")
-    client.subscribe("olulu/mi/set_schedule")
-    client.subscribe("olulu/mi/req_schedule")
-    client.subscribe("olulu/system/res_history/+")#訂閱 OLuLu 傳回來的歷史資料頻道 (+ 代表接收所有床位)
-
+    print("Mi 背景通報與網頁服務已連線 MQTT Broker！")
+    client.subscribe("olulu/system/res_history/+") 
+    client.subscribe("olulu/system/state_update")
+    # 訂閱來自 Python 獨立控制台的指令
+    client.subscribe("olulu/mi/req_report")     # 手動寄信
+    client.subscribe("olulu/mi/set_schedule")   # 設定排程
+    client.subscribe("olulu/mi/req_schedule")   # 索取目前排程
     
+    # 連線後主動索取最新的病床狀態
+    client.publish("olulu/system/req_config", "all")
+
 def on_message(client, userdata, msg):
     global CURRENT_SCHEDULE
     try:
         payload = msg.payload.decode('utf-8')
-        # 🟢 新增：攔截 OLuLu 傳來的記憶體快取資料
-        if msg.topic.startswith("olulu/system/res_history/"):
-            bed_name = msg.topic.split("/")[-1]
+        topic = msg.topic
+        
+        # 1. 攔截 OLuLu 傳來的記憶體快取資料
+        if topic.startswith("olulu/system/res_history/"):
+            bed_name = topic.split("/")[-1]
             try:
-                history_data = json.loads(payload) # OLuLu 傳來的是 JSON
-                # 看看有沒有人正在等這個床位的資料，有的話就丟進信箱
+                history_data = json.loads(payload)
                 if bed_name in MQTT_RESPONSE_QUEUES:
                     MQTT_RESPONSE_QUEUES[bed_name].put(history_data)
             except Exception as e:
-                print(f"❌ 解析快取資料失敗: {e}")
-            return # 處理完就結束，不要往下跑
+                print(f"解析快取資料失敗: {e}")
+            return 
         
-        # 處理前端發來的「設定排程」指令
-        elif msg.topic == "olulu/mi/set_schedule":
-            schedule_data = json.loads(payload)
-            CURRENT_SCHEDULE = schedule_data # 🌟 同步更新記憶體快取
-            
-            with open(SCHEDULE_FILE, "w", encoding="utf-8") as f:
-                json.dump(schedule_data, f)
-            print(f"📝 已更新排程設定：每 {schedule_data.get('interval')} 小時寄送，名單: {schedule_data.get('scheduled_patients')}")
-            
-            client.publish("olulu/mi/schedule_update", json.dumps(schedule_data))
-
-        # 處理前端剛開機時，主動來要排程的請求
-        elif msg.topic == "olulu/mi/req_schedule":
-            # 直接從記憶體快取回傳
-            client.publish("olulu/mi/schedule_update", json.dumps(CURRENT_SCHEDULE))
-
-        # 處理前端發來的「手動立即寄出」指令
-        elif msg.topic == "olulu/mi/req_report":
-            req_data = json.loads(payload)
-            patients = req_data.get("target_patients", [])
-            address = req_data.get("address", RECEIVER_EMAIL)
-            
-            # 直接讀取記憶體快取中的真實頻率
+        # 2. 接收 OLuLu 主系統的床位狀態更新
+        if topic == "olulu/system/state_update":
+            system_state["beds_data"] = json.loads(payload)
+            return
+        # 3. 處理 Python 控制台的手動寄信要求
+        if topic == "olulu/mi/req_report":
+            data = json.loads(payload)
+            target_patients = data.get("target_patients", [])
             current_interval = CURRENT_SCHEDULE.get("interval", 1)
             
-            print(f"\n📥 [手動觸發] 收到通報請求，名單: {patients}，抓取過去 {current_interval} 小時資料")
-            
-            if patients:
-                # 將耗時且需要等待的寄信任務，丟給獨立的背景執行緒，以免卡住 MQTT 的接收通道了
+            if target_patients:
+                print(f"\n [MQTT觸發] 收到 Python 獨立控制台通報請求，名單: {target_patients}")
                 threading.Thread(
                     target=execute_combined_report, 
-                    args=(client, patients, address, current_interval),
+                    args=(client, target_patients, RECEIVER_EMAIL, current_interval),
                     daemon=True
-                ).start()                
+                ).start()
+            return
+
+        # 4. 處理 Python 控制台的排程更新設定
+        if topic == "olulu/mi/set_schedule":
+            data = json.loads(payload)
+            CURRENT_SCHEDULE = data
+            system_state["schedule"] = data
+            
+            # 寫入硬碟
+            with open(SCHEDULE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+                
+            # 廣播給其他端 (讓網頁跟其他 Python 視窗同步變更)
+            client.publish("olulu/mi/schedule_update", json.dumps(data))
+            print(f"[MQTT觸發] 排程已更新: {data}")
+            return
+
+        # 5. 處理 Python 控制台剛啟動時的排程索取
+        if topic == "olulu/mi/req_schedule":
+            client.publish("olulu/mi/schedule_update", json.dumps(CURRENT_SCHEDULE))
+            return
+
     except Exception as e: 
-        print(f"❌ 處理錯誤: {e}")
+        print(f"❌ MQTT 處理錯誤: {e}")
 
-
+# ================= 程式進入點 =================
 if __name__ == "__main__":
-    threading.Thread(target=auto_timer_worker, daemon=True).start()
-    
-    client = mqtt.Client(client_id="olulu_mi_background_service")
-    client.on_connect = on_connect
-    client.on_message = on_message
-    
+    # 1. 建立 MQTT Client
     try:
-        client.connect(BROKER_IP, 1883, 60)
-        client.loop_forever()
-    except KeyboardInterrupt:
-        print("\n⛔ MI 背景服務手動關閉")
-        client.disconnect()
+        mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="mi_integrated_service")
+    except AttributeError:
+        mqtt_client = mqtt.Client(client_id="mi_integrated_service")
+        
+    mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
+    
+    # 2. 啟動背景定時器
+    threading.Thread(target=auto_timer_worker, args=(mqtt_client,), daemon=True).start()
+    
+    # 3. 連線 MQTT (改用 loop_start 讓它在背景跑，不卡住 Flask)
+    try:
+        mqtt_client.connect(BROKER_IP, BROKER_PORT, 60)
+        mqtt_client.loop_start() 
+    except Exception as e:
+        print(f"MQTT 連線失敗: {e}")
+
+    # 4. 啟動網頁伺服器
+    print("===============================================================")
+    print(" MI Web 控制台已啟動！")
+    print(f"請在瀏覽器輸入: http://[伺服器IP]:{WEB_PORT}")
+    print("===============================================================")
+    app.run(host='0.0.0.0', port=WEB_PORT, debug=False, use_reloader=False)
